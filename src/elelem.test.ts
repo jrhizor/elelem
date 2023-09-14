@@ -1,7 +1,7 @@
 import { Redis } from "ioredis";
 import OpenAI from "openai";
 import { z } from "zod";
-import { elelem, ElelemError, ElelemUsage } from "./elelem";
+import { elelem } from "./elelem";
 import { describe, expect, test, afterAll } from "@jest/globals";
 import { config } from "dotenv";
 
@@ -12,6 +12,8 @@ import {
   LangchainJsonSchemaFormatter,
 } from "./formatters";
 import { ConsoleSpanExporter } from "@opentelemetry/sdk-trace-node";
+import {ElelemUsage} from "./types";
+import {ElelemError} from "./tracing";
 
 const sdk = new opentelemetry.NodeSDK({
   serviceName: "elelem-test",
