@@ -90,7 +90,7 @@ describe("elelem", () => {
 
         expect(result.foundingYear).toBe("1790");
         expect(result.populationEstimate).toBeGreaterThan(500000);
-    }, 10000);
+    }, 20000);
 
     test("cache test", async () => {
         const inputString = `something-${Math.random()}`;
@@ -125,7 +125,7 @@ describe("elelem", () => {
         expect(usage2.completion_tokens).toBe(0);
         expect(usage2.total_tokens).toBe(0);
         expect(usage2.cost_usd).toBe(0);
-    }, 10000);
+    }, 20000);
 
     test("correct sums of tokens", async () => {
         let usage1: ElelemUsage = {
@@ -186,7 +186,7 @@ describe("elelem", () => {
         expect(totalUsage.completion_tokens).toBeGreaterThan(0);
         expect(totalUsage.total_tokens).toBeGreaterThan(0);
         expect(totalUsage.cost_usd).toBeGreaterThan(0);
-    }, 10000);
+    }, 20000);
 
     test("invalid format", async () => {
         const usage: ElelemUsage = {
@@ -254,5 +254,5 @@ describe("elelem", () => {
 
         // langchain formatter is worse than the faker one, so this should fail with the same prompt
         await expect(wrapper()).rejects.toThrowError(ElelemError);
-    }, 10000);
+    }, 20000);
 });
