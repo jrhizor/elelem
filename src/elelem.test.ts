@@ -1,5 +1,3 @@
-// todo: check test coverage of this
-
 import { Redis } from "ioredis";
 import OpenAI from "openai";
 import { z } from "zod";
@@ -13,7 +11,7 @@ import { config } from "dotenv";
 
 import * as opentelemetry from "@opentelemetry/sdk-node";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
-import {fakerExampleFormatter, langchainJsonSchemaFormatter} from "./formatters";
+import { JsonSchemaAndExampleFormatter, langchainJsonSchemaFormatter} from "./formatters";
 
 const sdk = new opentelemetry.NodeSDK({
     serviceName: "elelem-test",
@@ -63,7 +61,7 @@ describe("elelem", () => {
                     `What is the capitol of the country provided?`,
                     "USA",
                     capitolResponseSchema,
-                    fakerExampleFormatter,
+                    JsonSchemaAndExampleFormatter,
                     { max_tokens: 100, temperature: 0 }
                 );
                 console.log("capitol", capitol);
@@ -73,7 +71,7 @@ describe("elelem", () => {
                     `For the given capitol city, return the founding year and an estimate of the population of the city.`,
                     capitol.capitol,
                     cityResponseSchema,
-                    fakerExampleFormatter,
+                    JsonSchemaAndExampleFormatter,
                     {
                         max_tokens: 100,
                         temperature: 0,
@@ -104,7 +102,7 @@ describe("elelem", () => {
                         `Wrap the input string in the json format.`,
                         inputString,
                         strResponseSchema,
-                        fakerExampleFormatter,
+                        JsonSchemaAndExampleFormatter,
                         { max_tokens: 100, temperature: 0 }
                     );
                 }
@@ -150,7 +148,7 @@ describe("elelem", () => {
                     `Wrap the input string in the json format.`,
                     `something-${Math.random()}`,
                     strResponseSchema,
-                    fakerExampleFormatter,
+                    JsonSchemaAndExampleFormatter,
                     { max_tokens: 100, temperature: 0 }
                 );
 
@@ -159,7 +157,7 @@ describe("elelem", () => {
                     `Wrap the input string in the json format.`,
                     `something-${Math.random()}`,
                     strResponseSchema,
-                    fakerExampleFormatter,
+                    JsonSchemaAndExampleFormatter,
                     { max_tokens: 100, temperature: 0 }
                 );
 
@@ -252,7 +250,7 @@ describe("elelem", () => {
                 });
         };
 
-        // langchain formatter is worse than the faker one, so this should fail with the same prompt
+        // langchain formatter is worse than the one that includes examples, so this should fail with the same prompt
         await expect(wrapper()).rejects.toThrowError(ElelemError);
     }, 20000);
 });

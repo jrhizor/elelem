@@ -432,8 +432,7 @@ export const elelem: Elelem = {
                                                 "openai.prompt.system": systemPromptWithFormat,
                                                 "openai.prompt.user": userPrompt,
                                                 "openai.prompt.response": response || "null",
-                                                "openai.prompt.response.extracted":
-                                                    JSON.stringify(extractedJson),
+                                                "openai.prompt.response.extracted": extractedJson || "null",
                                             };
 
                                             // handle attempt attributes
