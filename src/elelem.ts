@@ -53,11 +53,11 @@ export interface InitializedElelem {
 export interface ElelemContext {
   singleChat: <T>(
     chatId: string,
+    modelOptions: Partial<ElelemModelOptions>,
     systemPrompt: string,
     userPrompt: string,
     schema: ZodType<T>,
     formatter: ElelemFormatter,
-    modelOptions?: Partial<ElelemModelOptions>,
   ) => Promise<{ result: T; usage: ElelemUsage }>;
 }
 
@@ -283,11 +283,11 @@ export const elelem: Elelem = {
             const context: ElelemContext = {
               singleChat: async (
                 chatId,
+                modelOptions,
                 systemPrompt,
                 userPrompt,
                 schema,
                 formatter: ElelemFormatter,
-                modelOptions,
               ) => {
                 const singleChatUsage: ElelemUsage = {
                   completion_tokens: 0,

@@ -65,24 +65,24 @@ describe("elelem", () => {
       async (c) => {
         const { result: capitol } = await c.singleChat(
           "capitol",
+          { max_tokens: 100, temperature: 0 },
           `What is the capitol of the country provided?`,
           "USA",
           capitolResponseSchema,
           JsonSchemaAndExampleFormatter,
-          { max_tokens: 100, temperature: 0 },
         );
         console.log("capitol", capitol);
 
         const { result: cityDescription } = await c.singleChat(
           "city-description",
-          `For the given capitol city, return the founding year and an estimate of the population of the city.`,
-          capitol.capitol,
-          cityResponseSchema,
-          JsonSchemaAndExampleFormatter,
           {
             max_tokens: 100,
             temperature: 0,
           },
+          `For the given capitol city, return the founding year and an estimate of the population of the city.`,
+          capitol.capitol,
+          cityResponseSchema,
+          JsonSchemaAndExampleFormatter,
         );
         console.log("cityDescription", cityDescription);
 
@@ -106,11 +106,11 @@ describe("elelem", () => {
         async (c) => {
           return await c.singleChat(
             id,
+            { max_tokens: 100, temperature: 0 },
             `Wrap the input string in the json format.`,
             inputString,
             strResponseSchema,
             JsonSchemaAndExampleFormatter,
-            { max_tokens: 100, temperature: 0 },
           );
         },
       );
@@ -152,20 +152,20 @@ describe("elelem", () => {
       async (c) => {
         const { usage: u1 } = await c.singleChat(
           "first-call",
+          { max_tokens: 100, temperature: 0 },
           `Wrap the input string in the json format.`,
           `something-${Math.random()}`,
           strResponseSchema,
           JsonSchemaAndExampleFormatter,
-          { max_tokens: 100, temperature: 0 },
         );
 
         const { usage: u2 } = await c.singleChat(
           "second-call",
+          { max_tokens: 100, temperature: 0 },
           `Wrap the input string in the json format.`,
           `something-${Math.random()}`,
           strResponseSchema,
           JsonSchemaAndExampleFormatter,
-          { max_tokens: 100, temperature: 0 },
         );
 
         usage1 = u1;
@@ -209,14 +209,14 @@ describe("elelem", () => {
             // todo: move cache write to before parsing
             const { result: cityDescription } = await c.singleChat(
               "city-description",
-              `Request ${Math.random()}\nFor the given capitol city, return the founding year and an estimate of the population of the city.`,
-              "Washington, D.C.",
-              cityResponseSchema,
-              langchainJsonSchemaFormatter,
               {
                 max_tokens: 100,
                 temperature: 0,
               },
+              `Request ${Math.random()}\nFor the given capitol city, return the founding year and an estimate of the population of the city.`,
+              "Washington, D.C.",
+              cityResponseSchema,
+              langchainJsonSchemaFormatter,
             );
             return cityDescription;
           } catch (e) {
