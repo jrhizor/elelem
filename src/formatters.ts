@@ -1,9 +1,9 @@
 import { ZodType } from "zod";
 import { zodToJsonSchema } from "zod-to-json-schema";
 import { generateMock } from "@anatine/zod-mock";
-import { ElelemFormatter } from "./elelem";
+import { ElelemFormatter } from "./types";
 
-export const langchainJsonSchemaFormatter = <T>(schema: ZodType<T>) => {
+export const LangchainJsonSchemaFormatter = <T>(schema: ZodType<T>) => {
   return `You must format your output as a JSON value that adheres to a given "JSON Schema" instance.
 
 "JSON Schema" is a declarative language that allows you to annotate and validate JSON documents.
@@ -21,7 +21,7 @@ ${JSON.stringify(zodToJsonSchema(schema))}
 `;
 };
 
-export const fakerExampleFormatter: ElelemFormatter = <T>(
+export const akerExampleFormatter: ElelemFormatter = <T>(
   schema: ZodType<T>,
 ) => {
   return `
@@ -55,6 +55,6 @@ ${JSON.stringify(generateMock(schema, { seed: 11 }))}
 `.trim();
 };
 
-export const nullFormatter: ElelemFormatter = () => {
+export const NullFormatter: ElelemFormatter = () => {
   return "";
 };

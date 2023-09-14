@@ -1,6 +1,4 @@
-import { type Redis } from "ioredis";
 import type OpenAI from "openai";
-import { type ZodType } from "zod";
 import { backOff, type BackoffOptions } from "exponential-backoff";
 import objectHash from "object-hash";
 import {
@@ -10,56 +8,17 @@ import {
   trace,
 } from "@opentelemetry/api";
 import { type CompletionUsage } from "openai/resources";
-import { type ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
 import { extractLastJSON } from "./helpers";
-
-export interface ElelemCache {
-  // keys will be hashed using object-hash
-  read: (key: object) => Promise<string | null>;
-  write: (key: object, value: string) => Promise<void>;
-}
-
-export interface ElelemCacheConfig {
-  redis?: Redis;
-  custom?: ElelemCache;
-}
-
-export interface ElelemConfig {
-  // only applies to the whole "singleChat", not cache retries, which always use the default behavior
-  backoffOptions?: BackoffOptions;
-  cache?: ElelemCacheConfig;
-  openai: OpenAI;
-}
-
-export interface Elelem {
-  init: (config: ElelemConfig) => InitializedElelem;
-}
-
-export type ElelemFormatter = <T>(schema: ZodType<T>) => string;
-
-type ElelemModelOptions = Omit<
-  ChatCompletionCreateParamsNonStreaming,
-  "messages"
->;
-
-export interface InitializedElelem {
-  session: <T>(
-    sessionId: string,
-    defaultModelOptions: ElelemModelOptions,
-    contextFunction: (context: ElelemContext) => Promise<T>,
-  ) => Promise<{ result: T; usage: ElelemUsage }>;
-}
-
-export interface ElelemContext {
-  singleChat: <T>(
-    chatId: string,
-    modelOptions: Partial<ElelemModelOptions>,
-    systemPrompt: string,
-    userPrompt: string,
-    schema: ZodType<T>,
-    formatter: ElelemFormatter,
-  ) => Promise<{ result: T; usage: ElelemUsage }>;
-}
+import {
+  Elelem,
+  ElelemCache,
+  ElelemCacheConfig,
+  ElelemConfig,
+  ElelemConfigAttributes,
+  ElelemContext,
+  ElelemFormatter,
+  ElelemModelOptions,
+} from "./types";
 
 const getCache = (cacheConfig: ElelemCacheConfig): ElelemCache => {
   if (cacheConfig.redis) {
@@ -124,23 +83,13 @@ const setUsageAttributes = (span: Span, usage: ElelemUsage) => {
   span.setAttribute("openai.usage.cost_usd", usage.cost_usd);
 };
 
-interface ConfigAttributes {
-  "elelem.cache.hit": boolean;
-  "elelem.error": string;
-  "openai.prompt.options": string;
-  "openai.prompt.system": string;
-  "openai.prompt.user": string;
-  "openai.prompt.response": string;
-  "openai.prompt.response.extracted": string;
-}
-
-const setConfigAttributes = (
+const setElelemConfigAttributes = (
   span: Span,
-  configAttributes: ConfigAttributes,
+  ElelemConfigAttributes: ElelemConfigAttributes,
 ) => {
-  for (const key of Object.keys(configAttributes)) {
-    const attributeKey = key as keyof ConfigAttributes;
-    span.setAttribute(attributeKey, configAttributes[attributeKey]);
+  for (const key of Object.keys(ElelemConfigAttributes)) {
+    const attributeKey = key as keyof ElelemConfigAttributes;
+    span.setAttribute(attributeKey, ElelemConfigAttributes[attributeKey]);
   }
 };
 
@@ -420,7 +369,7 @@ export const elelem: Elelem = {
                         singleChatUsage,
                       );
                     } finally {
-                      const attributes: ConfigAttributes = {
+                      const attributes: ElelemConfigAttributes = {
                         "elelem.cache.hit": cacheHit,
                         "elelem.error": error || "null",
                         "openai.prompt.options":
@@ -433,14 +382,17 @@ export const elelem: Elelem = {
                       };
 
                       // handle attempt attributes
-                      setConfigAttributes(singleChatAttemptSpan, attributes);
+                      setElelemConfigAttributes(
+                        singleChatAttemptSpan,
+                        attributes,
+                      );
                       setUsageAttributes(
                         singleChatAttemptSpan,
                         singleChatAttemptUsage,
                       );
 
                       // handle the parent attributes each attempt
-                      setConfigAttributes(singleChatSpan, attributes);
+                      setElelemConfigAttributes(singleChatSpan, attributes);
                       setUsageAttributes(singleChatSpan, singleChatUsage);
 
                       singleChatAttemptSpan.end();

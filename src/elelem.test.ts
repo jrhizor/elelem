@@ -9,7 +9,7 @@ import * as opentelemetry from "@opentelemetry/sdk-node";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
 import {
   JsonSchemaAndExampleFormatter,
-  langchainJsonSchemaFormatter,
+  LangchainJsonSchemaFormatter,
 } from "./formatters";
 import { ConsoleSpanExporter } from "@opentelemetry/sdk-trace-node";
 
@@ -216,7 +216,7 @@ describe("elelem", () => {
               `Request ${Math.random()}\nFor the given capitol city, return the founding year and an estimate of the population of the city.`,
               "Washington, D.C.",
               cityResponseSchema,
-              langchainJsonSchemaFormatter,
+              LangchainJsonSchemaFormatter,
             );
             return cityDescription;
           } catch (e) {
