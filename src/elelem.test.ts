@@ -55,7 +55,7 @@ afterAll(async () => {
 describe("elelem", () => {
     test("e2e example", async () => {
         const { result, usage } = await llm.session(
-            { id: "e2e-exmaple" },
+            { id: "e2e-example" },
             { model: "gpt-3.5-turbo" },
             async (c) => {
                 const { result: capitol } = await c.singleChat(
