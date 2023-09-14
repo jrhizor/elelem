@@ -11,11 +11,13 @@ import {
   JsonSchemaAndExampleFormatter,
   langchainJsonSchemaFormatter,
 } from "./formatters";
-import {ConsoleSpanExporter} from "@opentelemetry/sdk-trace-node";
+import { ConsoleSpanExporter } from "@opentelemetry/sdk-trace-node";
 
 const sdk = new opentelemetry.NodeSDK({
   serviceName: "elelem-test",
-  traceExporter: process.env.CI ? new ConsoleSpanExporter() : new OTLPTraceExporter(),
+  traceExporter: process.env.CI
+    ? new ConsoleSpanExporter()
+    : new OTLPTraceExporter(),
 });
 sdk.start();
 
@@ -58,11 +60,11 @@ afterAll(async () => {
 describe("elelem", () => {
   test("e2e example", async () => {
     const { result, usage } = await llm.session(
-      { id: "e2e-example" },
+      "e2e-example",
       { model: "gpt-3.5-turbo" },
       async (c) => {
         const { result: capitol } = await c.singleChat(
-          { id: "capitol" },
+          "capitol",
           `What is the capitol of the country provided?`,
           "USA",
           capitolResponseSchema,
@@ -72,7 +74,7 @@ describe("elelem", () => {
         console.log("capitol", capitol);
 
         const { result: cityDescription } = await c.singleChat(
-          { id: "city-description" },
+          "city-description",
           `For the given capitol city, return the founding year and an estimate of the population of the city.`,
           capitol.capitol,
           cityResponseSchema,
@@ -99,11 +101,11 @@ describe("elelem", () => {
     const inputString = `something-${Math.random()}`;
     const fn = async (id: string) => {
       const { usage } = await llm.session(
-        { id: id },
+        id,
         { model: "gpt-3.5-turbo" },
         async (c) => {
           return await c.singleChat(
-            { id: id },
+            id,
             `Wrap the input string in the json format.`,
             inputString,
             strResponseSchema,
@@ -145,11 +147,11 @@ describe("elelem", () => {
     };
 
     const { usage: totalUsage } = await llm.session(
-      { id: "sum-tokens-test" },
+      "sum-tokens-test",
       { model: "gpt-3.5-turbo" },
       async (c) => {
         const { usage: u1 } = await c.singleChat(
-          { id: "first-call" },
+          "first-call",
           `Wrap the input string in the json format.`,
           `something-${Math.random()}`,
           strResponseSchema,
@@ -158,7 +160,7 @@ describe("elelem", () => {
         );
 
         const { usage: u2 } = await c.singleChat(
-          { id: "second-call" },
+          "second-call",
           `Wrap the input string in the json format.`,
           `something-${Math.random()}`,
           strResponseSchema,
@@ -201,45 +203,41 @@ describe("elelem", () => {
 
     const wrapper = async () => {
       await llm
-        .session(
-          { id: "invalid-format" },
-          { model: "gpt-3.5-turbo" },
-          async (c) => {
-            try {
-              // todo: move cache out to before to only do once?
-              // todo: move cache write to before parsing
-              const { result: cityDescription } = await c.singleChat(
-                { id: "city-description" },
-                `Request ${Math.random()}\nFor the given capitol city, return the founding year and an estimate of the population of the city.`,
-                "Washington, D.C.",
-                cityResponseSchema,
-                langchainJsonSchemaFormatter,
-                {
-                  max_tokens: 100,
-                  temperature: 0,
-                },
-              );
-              return cityDescription;
-            } catch (e) {
-              // check that we're returning usage for the individual attempts
-              if (e instanceof ElelemError) {
-                expect(e.usage.prompt_tokens).toBeGreaterThan(0);
-                expect(e.usage.completion_tokens).toBeGreaterThan(0);
-                expect(e.usage.total_tokens).toBeGreaterThan(0);
-                expect(e.usage.cost_usd).toBeGreaterThan(0);
+        .session("invalid-format", { model: "gpt-3.5-turbo" }, async (c) => {
+          try {
+            // todo: move cache out to before to only do once?
+            // todo: move cache write to before parsing
+            const { result: cityDescription } = await c.singleChat(
+              "city-description",
+              `Request ${Math.random()}\nFor the given capitol city, return the founding year and an estimate of the population of the city.`,
+              "Washington, D.C.",
+              cityResponseSchema,
+              langchainJsonSchemaFormatter,
+              {
+                max_tokens: 100,
+                temperature: 0,
+              },
+            );
+            return cityDescription;
+          } catch (e) {
+            // check that we're returning usage for the individual attempts
+            if (e instanceof ElelemError) {
+              expect(e.usage.prompt_tokens).toBeGreaterThan(0);
+              expect(e.usage.completion_tokens).toBeGreaterThan(0);
+              expect(e.usage.total_tokens).toBeGreaterThan(0);
+              expect(e.usage.cost_usd).toBeGreaterThan(0);
 
-                usage.prompt_tokens += e.usage.prompt_tokens;
-                usage.completion_tokens += e.usage.completion_tokens;
-                usage.total_tokens += e.usage.total_tokens;
-                usage.cost_usd += e.usage.cost_usd;
-              } else {
-                // this should never happen!
-                expect(true).toBe(false);
-              }
-              throw e;
+              usage.prompt_tokens += e.usage.prompt_tokens;
+              usage.completion_tokens += e.usage.completion_tokens;
+              usage.total_tokens += e.usage.total_tokens;
+              usage.cost_usd += e.usage.cost_usd;
+            } else {
+              // this should never happen!
+              expect(true).toBe(false);
             }
-          },
-        )
+            throw e;
+          }
+        })
         .catch((e) => {
           // check that we're returning usage for the session
           if (e instanceof ElelemError) {

@@ -31,10 +31,6 @@ export interface ElelemConfig {
   openai: OpenAI;
 }
 
-export interface ElelemMetadata {
-  id: string;
-}
-
 export interface Elelem {
   init: (config: ElelemConfig) => InitializedElelem;
 }
@@ -48,7 +44,7 @@ type ElelemModelOptions = Omit<
 
 export interface InitializedElelem {
   session: <T>(
-    metadata: ElelemMetadata,
+    sessionId: string,
     defaultModelOptions: ElelemModelOptions,
     contextFunction: (context: ElelemContext) => Promise<T>,
   ) => Promise<{ result: T; usage: ElelemUsage }>;
@@ -56,7 +52,7 @@ export interface InitializedElelem {
 
 export interface ElelemContext {
   singleChat: <T>(
-    metadata: ElelemMetadata,
+    chatId: string,
     systemPrompt: string,
     userPrompt: string,
     schema: ZodType<T>,
@@ -274,7 +270,7 @@ export const elelem: Elelem = {
     const cache: ElelemCache = getCache(cacheConfig || {});
 
     return {
-      session: async (metadata, defaultModelOptions, contextFunction) => {
+      session: async (sessionId, defaultModelOptions, contextFunction) => {
         const sessionUsage: ElelemUsage = {
           completion_tokens: 0,
           prompt_tokens: 0,
@@ -282,11 +278,11 @@ export const elelem: Elelem = {
           cost_usd: 0,
         };
 
-        return tracer.startActiveSpan(metadata.id, async (sessionSpan) => {
+        return tracer.startActiveSpan(sessionId, async (sessionSpan) => {
           try {
             const context: ElelemContext = {
               singleChat: async (
-                meta,
+                chatId,
                 systemPrompt,
                 userPrompt,
                 schema,
@@ -301,7 +297,7 @@ export const elelem: Elelem = {
                 };
 
                 return await withRetries(
-                  meta.id,
+                  chatId,
                   async (singleChatAttemptSpan, singleChatSpan) => {
                     const combinedOptions = {
                       ...defaultModelOptions,
