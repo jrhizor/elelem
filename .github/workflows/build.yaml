@@ -48,6 +48,7 @@ jobs:
 
       - name: Run tests
         env:
+          CI: true
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
           REDIS: "redis://localhost:6379"
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}

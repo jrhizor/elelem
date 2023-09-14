@@ -11,10 +11,11 @@ import {
   JsonSchemaAndExampleFormatter,
   langchainJsonSchemaFormatter,
 } from "./formatters";
+import {ConsoleSpanExporter} from "@opentelemetry/sdk-trace-node";
 
 const sdk = new opentelemetry.NodeSDK({
   serviceName: "elelem-test",
-  traceExporter: new OTLPTraceExporter(),
+  traceExporter: process.env.CI ? new ConsoleSpanExporter() : new OTLPTraceExporter(),
 });
 sdk.start();
 
