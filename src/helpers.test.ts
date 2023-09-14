@@ -1,70 +1,67 @@
 import { describe, expect, test } from "@jest/globals";
-import {extractLastJSON} from "./helpers";
+import { extractLastJSON } from "./helpers";
 
 interface SimpleType {
-    a: number;
-    b: number;
+  a: number;
+  b: number;
 }
 
 interface MoreComplexType {
-    a: number;
-    b: number;
-    c: {
-        d: string;
-        e: string;
-    }
+  a: number;
+  b: number;
+  c: {
+    d: string;
+    e: string;
+  };
 }
 
 const expected: SimpleType = { a: 540, b: 45 };
 
 const runAssertions = (actual: string | null) => {
-    expect(actual).not.toBeNull();
+  expect(actual).not.toBeNull();
 
-    if (actual !== null) {
-        const json = JSON.parse(actual) as SimpleType;
-        expect(json.a).toBe(expected.a);
-        expect(json.b).toBe(expected.b);
-    }
+  if (actual !== null) {
+    const json = JSON.parse(actual) as SimpleType;
+    expect(json.a).toBe(expected.a);
+    expect(json.b).toBe(expected.b);
+  }
 };
 
 describe("test JSON extraction", () => {
-    test("basic", async () => {
-        const actual =
-            extractLastJSON(`
+  test("basic", async () => {
+    const actual = extractLastJSON(`
 A 
 multi
 line 
 string
 { "a": 540, "b": 45 }`);
 
-        runAssertions(actual);
-    });
+    runAssertions(actual);
+  });
 
-    test("multiple json", async () => {
-        const actual = extractLastJSON(
-            `{ "a": 5400, "b": 450 }{ "a": 540, "b": 45 }`
-        );
+  test("multiple json", async () => {
+    const actual = extractLastJSON(
+      `{ "a": 5400, "b": 450 }{ "a": 540, "b": 45 }`,
+    );
 
-        console.log("actual", actual);
+    console.log("actual", actual);
 
-        runAssertions(actual);
-    });
+    runAssertions(actual);
+  });
 
-    test("with single backtick at end", async () => {
-        const actual =
-            extractLastJSON(`
+  test("with single backtick at end", async () => {
+    const actual = extractLastJSON(`
 A 
 multi
 line 
 string
   \`{ "a": 540, "b": 45 }\``);
 
-        runAssertions(actual);
-    });
+    runAssertions(actual);
+  });
 
-    test("with multiple backticks", async () => {
-        const actual =
-            extractLastJSON(`
+  test("with multiple backticks", async () => {
+    const actual = extractLastJSON(`
 A 
 multi
 line 
@@ -73,12 +70,11 @@ string
 { "a": 540, "b": 45 }
 \`\`\``);
 
-        runAssertions(actual);
-    });
+    runAssertions(actual);
+  });
 
-    test("multiline json with backticks", async () => {
-        const actual =
-            extractLastJSON(`
+  test("multiline json with backticks", async () => {
+    const actual = extractLastJSON(`
 A 
 multi
 line 
@@ -90,12 +86,11 @@ string
 }
 \`\`\``);
 
-        runAssertions(actual);
-    });
+    runAssertions(actual);
+  });
 
-    test("multiline json without backticks", async () => {
-        const actual =
-            extractLastJSON(`A 
+  test("multiline json without backticks", async () => {
+    const actual = extractLastJSON(`A 
 multi
 line 
 string
@@ -106,13 +101,11 @@ string
 }
 `);
 
-        runAssertions(actual);
-    });
+    runAssertions(actual);
+  });
 
-    test("nested object", async () => {
-
-        const actual =
-            extractLastJSON(`A 
+  test("nested object", async () => {
+    const actual = extractLastJSON(`A 
 multi
 line 
 string
@@ -127,14 +120,14 @@ string
 }
 `);
 
-        expect(actual).not.toBeNull();
+    expect(actual).not.toBeNull();
 
-        if (actual !== null) {
-            const json = JSON.parse(actual) as MoreComplexType;
-            expect(json.a).toBe(expected.a);
-            expect(json.b).toBe(expected.b);
-            expect(json.c.d).toBe("hi");
-            expect(json.c.e).toBe("{hi}");
-        }
-    });
+    if (actual !== null) {
+      const json = JSON.parse(actual) as MoreComplexType;
+      expect(json.a).toBe(expected.a);
+      expect(json.b).toBe(expected.b);
+      expect(json.c.d).toBe("hi");
+      expect(json.c.e).toBe("{hi}");
+    }
+  });
 });

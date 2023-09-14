@@ -9,7 +9,7 @@
   ],
   "scripts": {
     "test": "jest --collect-coverage",
-    "format": "prettier --write scripts src",
+    "format": "prettier --write src",
     "build": "tsc"
   },
   "repository": {

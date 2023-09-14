@@ -1,10 +1,10 @@
-import {ZodType} from "zod";
-import {zodToJsonSchema} from "zod-to-json-schema";
-import {generateMock} from "@anatine/zod-mock";
-import {ElelemFormatter} from "./elelem";
+import { ZodType } from "zod";
+import { zodToJsonSchema } from "zod-to-json-schema";
+import { generateMock } from "@anatine/zod-mock";
+import { ElelemFormatter } from "./elelem";
 
 export const langchainJsonSchemaFormatter = <T>(schema: ZodType<T>) => {
-    return `You must format your output as a JSON value that adheres to a given "JSON Schema" instance.
+  return `You must format your output as a JSON value that adheres to a given "JSON Schema" instance.
 
 "JSON Schema" is a declarative language that allows you to annotate and validate JSON documents.
 
@@ -22,18 +22,18 @@ ${JSON.stringify(zodToJsonSchema(schema))}
 };
 
 export const fakerExampleFormatter: ElelemFormatter = <T>(
-    schema: ZodType<T>
+  schema: ZodType<T>,
 ) => {
-    return `
+  return `
 You must format your output as valid JSON in the following format:
 ${JSON.stringify(generateMock(schema, { seed: 11 }))}
 `.trim();
 };
 
 export const JsonSchemaAndExampleFormatter: ElelemFormatter = <T>(
-    schema: ZodType<T>
+  schema: ZodType<T>,
 ) => {
-    return `You must format your output as a JSON value that adheres to a given "JSON Schema" instance.
+  return `You must format your output as a JSON value that adheres to a given "JSON Schema" instance.
 
 "JSON Schema" is a declarative language that allows you to annotate and validate JSON documents.
 
@@ -56,5 +56,5 @@ ${JSON.stringify(generateMock(schema, { seed: 11 }))}
 };
 
 export const nullFormatter: ElelemFormatter = () => {
-    return "";
+  return "";
 };
