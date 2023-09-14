@@ -10,12 +10,20 @@ import { describe, expect, test, afterAll } from "@jest/globals";
 import { config } from "dotenv";
 
 import * as opentelemetry from "@opentelemetry/sdk-node";
+import {hrTimeToMicroseconds} from "@opentelemetry/core";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
 import { JsonSchemaAndExampleFormatter, langchainJsonSchemaFormatter} from "./formatters";
+import {InMemorySpanExporter} from "@opentelemetry/sdk-trace-base";
+import {CompositeExporter} from "./composite_exporter";
+import * as fs from "fs";
+
+const otlpExporter = new OTLPTraceExporter();
+const inMemoryExporter = new InMemorySpanExporter();
+const compositeExporter = new CompositeExporter([otlpExporter, inMemoryExporter]);
 
 const sdk = new opentelemetry.NodeSDK({
     serviceName: "elelem-test",
-    traceExporter: new OTLPTraceExporter(),
+    traceExporter: compositeExporter,
 });
 sdk.start();
 
@@ -46,8 +54,30 @@ const strResponseSchema = z.object({
 });
 
 afterAll(async () => {
-    await sdk.shutdown();
+    console.log("in after all")
+    const lines = inMemoryExporter.getFinishedSpans().map(span => JSON.stringify({
+        traceId: span.spanContext().traceId,
+        parentId: span.parentSpanId,
+        traceState: span.spanContext().traceState?.serialize(),
+        name: span.name,
+        id: span.spanContext().spanId,
+        kind: span.kind,
+        timestamp: hrTimeToMicroseconds(span.startTime),
+        duration: hrTimeToMicroseconds(span.duration),
+        attributes: span.attributes,
+        status: span.status,
+        events: span.events,
+        links: span.links,
+    })).join('\n');
+    fs.writeFileSync("./traces.jsonl", lines + '\n');
+    console.log("after writing file")
+
     redisClient.disconnect();
+    redisClient.shutdown();
+
+    await sdk.shutdown()
+        .then(() => console.log('Tracing terminated'))
+        .catch((error) => console.log('Error terminating tracing', error));
 });
 
 describe("elelem", () => {
@@ -88,7 +118,7 @@ describe("elelem", () => {
 
         expect(result.foundingYear).toBe("1790");
         expect(result.populationEstimate).toBeGreaterThan(500000);
-    }, 20000);
+    }, 10000);
 
     test("cache test", async () => {
         const inputString = `something-${Math.random()}`;
@@ -123,7 +153,7 @@ describe("elelem", () => {
         expect(usage2.completion_tokens).toBe(0);
         expect(usage2.total_tokens).toBe(0);
         expect(usage2.cost_usd).toBe(0);
-    }, 20000);
+    }, 10000);
 
     test("correct sums of tokens", async () => {
         let usage1: ElelemUsage = {
@@ -184,7 +214,7 @@ describe("elelem", () => {
         expect(totalUsage.completion_tokens).toBeGreaterThan(0);
         expect(totalUsage.total_tokens).toBeGreaterThan(0);
         expect(totalUsage.cost_usd).toBeGreaterThan(0);
-    }, 20000);
+    }, 10000);
 
     test("invalid format", async () => {
         const usage: ElelemUsage = {
@@ -252,5 +282,5 @@ describe("elelem", () => {
 
         // langchain formatter is worse than the one that includes examples, so this should fail with the same prompt
         await expect(wrapper()).rejects.toThrowError(ElelemError);
-    }, 20000);
+    }, 10000);
 });
