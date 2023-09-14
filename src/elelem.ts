@@ -1,111 +1,24 @@
 import type OpenAI from "openai";
 import { backOff, type BackoffOptions } from "exponential-backoff";
-import objectHash from "object-hash";
 import {
   type Exception,
   type Span,
   SpanStatusCode,
   trace,
 } from "@opentelemetry/api";
-import { type CompletionUsage } from "openai/resources";
 import { extractLastJSON } from "./helpers";
 import {
   Elelem,
   ElelemCache,
-  ElelemCacheConfig,
   ElelemConfig,
   ElelemConfigAttributes,
   ElelemContext,
   ElelemFormatter,
-  ElelemModelOptions,
+  ElelemModelOptions, ElelemUsage,
 } from "./types";
-
-const getCache = (cacheConfig: ElelemCacheConfig): ElelemCache => {
-  if (cacheConfig.redis) {
-    const redis = cacheConfig.redis;
-
-    return {
-      read: async (key: object) => {
-        const hashedKey = objectHash(key);
-        return redis.get(hashedKey);
-      },
-      write: async (key: object, value: string) => {
-        const hashedKey = objectHash(key);
-        await redis.set(hashedKey, value);
-      },
-    };
-  } else if (cacheConfig.custom) {
-    return cacheConfig.custom;
-  } else {
-    return {
-      read: async () => null,
-      write: async () => {
-        // no-op
-      },
-    };
-  }
-};
-
-const estimateCost = (usage: CompletionUsage, model: string) => {
-  const computeCost = (
-    pricePerThousandInputTokens: number,
-    pricePerThousandOutputTokens: number,
-  ) => {
-    return (
-      (pricePerThousandInputTokens * usage.prompt_tokens) / 1000 +
-      (pricePerThousandOutputTokens * usage.completion_tokens) / 1000
-    );
-  };
-
-  if (model.startsWith("gpt-4")) {
-    if (model.includes("32k")) {
-      return computeCost(0.06, 0.12);
-    } else {
-      // 8k
-      return computeCost(0.03, 0.06);
-    }
-  } else if (model.startsWith("gpt-3.5-turbo")) {
-    if (model.includes("16k")) {
-      return computeCost(0.003, 0.004);
-    } else {
-      // 4k
-      return computeCost(0.0015, 0.002);
-    }
-  } else {
-    return 0;
-  }
-};
-
-const setUsageAttributes = (span: Span, usage: ElelemUsage) => {
-  span.setAttribute("openai.usage.completion_tokens", usage.completion_tokens);
-  span.setAttribute("openai.usage.prompt_tokens", usage.prompt_tokens);
-  span.setAttribute("openai.usage.total_tokens", usage.total_tokens);
-  span.setAttribute("openai.usage.cost_usd", usage.cost_usd);
-};
-
-const setElelemConfigAttributes = (
-  span: Span,
-  ElelemConfigAttributes: ElelemConfigAttributes,
-) => {
-  for (const key of Object.keys(ElelemConfigAttributes)) {
-    const attributeKey = key as keyof ElelemConfigAttributes;
-    span.setAttribute(attributeKey, ElelemConfigAttributes[attributeKey]);
-  }
-};
-
-export type ElelemUsage = CompletionUsage & { cost_usd: number };
-
-export class ElelemError extends Error {
-  public usage: ElelemUsage;
-
-  constructor(message: string, usage: ElelemUsage) {
-    super(message);
-    this.usage = usage;
-
-    // needed for instanceOf
-    Object.setPrototypeOf(this, ElelemError.prototype);
-  }
-}
+import {estimateCost} from "./costs";
+import {getCache} from "./caching";
+import {ElelemError, setElelemConfigAttributes, setUsageAttributes} from "./tracing";
 
 const callApi = async (
   openai: OpenAI,
