@@ -40,9 +40,51 @@ yarn add elelem
 // todo
 ```
 
-## Viewing Traces
+## Viewing Traces on Jaeger
 
-[//]: # (todo code example for publishing)
+Start [Jaeger](https://www.jaegertracing.io/) locally using:
+```
+docker run --rm --name jaeger \
+  -e COLLECTOR_ZIPKIN_HOST_PORT=:9411 \
+  -p 6831:6831/udp \
+  -p 6832:6832/udp \
+  -p 5778:5778 \
+  -p 16686:16686 \
+  -p 4317:4317 \
+  -p 4318:4318 \
+  -p 14250:14250 \
+  -p 14268:14268 \
+  -p 14269:14269 \
+  -p 9411:9411 \
+  jaegertracing/all-in-one:1.49
+```
+
+Allow publishing traces to Jaeger with the following:
+```typescript
+import * as opentelemetry from "@opentelemetry/sdk-node";
+import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
+
+const sdk = new opentelemetry.NodeSDK({
+    serviceName: "your-service-name",
+    traceExporter: new OTLPTraceExporter(),
+});
+sdk.start();
+
+// rest of your code...
+
+process.on('SIGTERM', () => {
+    sdk.shutdown()
+        .then(() => console.log('Tracing terminated'))
+        .catch((error) => console.log('Error terminating tracing', error))
+        .finally(() => process.exit(0));
+});
+```
+
+When you run your code, your traces will be available at http://localhost:16686/.
+
+### Tracing in Production
+
+See the [OpenTelemetry docs](https://opentelemetry.io/docs/instrumentation/js/exporters/) for more information on sending traces to hosted instances of Zipkin, Jaeger, Datadog, etc.
 
 ## Contributing
 
@@ -50,6 +92,48 @@ Pull requests are welcome. For major changes, please open an issue first
 to discuss what you would like to change.
 
 Please make sure to update tests as appropriate.
+
+## For Contributors: Running Integration Tests
+
+To run tests, first make sure you have Git, Yarn, and Docker installed. Then checkout the repo and install dependencies:
+```
+git clone git@github.com:jrhizor/elelem.git
+cd elelem
+yarn install
+```
+
+Create a `.env` file:
+```
+OPENAI_API_KEY=<your key>
+REDIS=redis://localhost:6379
+```
+
+Start up Redis:
+```
+docker run -it -p 6379:6379 redis
+```
+
+Start up Jaeger:
+```
+docker run --rm --name jaeger \
+  -e COLLECTOR_ZIPKIN_HOST_PORT=:9411 \
+  -p 6831:6831/udp \
+  -p 6832:6832/udp \
+  -p 5778:5778 \
+  -p 16686:16686 \
+  -p 4317:4317 \
+  -p 4318:4318 \
+  -p 14250:14250 \
+  -p 14268:14268 \
+  -p 14269:14269 \
+  -p 9411:9411 \
+  jaegertracing/all-in-one:1.49
+```
+
+Now you're ready to run the unit and integration tests:
+```
+yarn test
+```
 
 ## License
 
