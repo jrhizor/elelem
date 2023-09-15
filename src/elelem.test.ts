@@ -50,8 +50,7 @@ const strResponseSchema = z.object({
 });
 
 afterAll(async () => {
-  redisClient.disconnect();
-  redisClient.shutdown();
+  redisClient.quit();
 
   await sdk
     .shutdown()
