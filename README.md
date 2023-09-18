@@ -5,7 +5,7 @@ Elelem is a simple, opinionated, JSON-typed, and traced LLM framework in TypeScr
 
 ## Why another LLM library?
 
-I recently tried to port a [production LLM-based application](https://www.mealtext.app/) over to LangChain. 
+I recently tried to port [MealByMeal](https://mealbymeal.app/), a production LLM-based application, over to LangChain. 
 The journey was not without its challenges. 
 For starters, caching is currently unsupported for chat-based endpoints, specifically for `gpt-3.5-turbo`. 
 Additionally, the interface for interacting with these endpoints felt quite awkward. 
