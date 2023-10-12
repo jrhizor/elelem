@@ -3,7 +3,7 @@ import { BackoffOptions } from "exponential-backoff";
 import OpenAI from "openai";
 import { ZodType } from "zod";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
-import {CompletionUsage} from "openai/resources";
+import { CompletionUsage } from "openai/resources";
 
 export interface ElelemCache {
   // keys will be hashed using object-hash
@@ -64,3 +64,15 @@ export interface ElelemConfigAttributes {
 }
 
 export type ElelemUsage = CompletionUsage & { cost_usd: number };
+
+export class ElelemError extends Error {
+  public usage: ElelemUsage;
+
+  constructor(message: string, usage: ElelemUsage) {
+    super(message);
+    this.usage = usage;
+
+    // needed for instanceOf
+    Object.setPrototypeOf(this, ElelemError.prototype);
+  }
+}

@@ -1,17 +1,16 @@
+![Elelem](images/elelem.png)
+
 # Elelem
 Elelem is a simple, opinionated, JSON-typed, and traced LLM framework in TypeScript.
 
-[//]: # (todo video)
-
 ## Why another LLM library?
 
-I recently tried to port [MealByMeal](https://mealbymeal.app/), a production LLM-based application, over to LangChain. 
-The journey was not without its challenges. 
-For starters, caching is currently unsupported for chat-based endpoints, specifically for `gpt-3.5-turbo`. 
-Additionally, the interface for interacting with these endpoints felt quite awkward. 
-Continuously handling and enforcing typed outputs turned out to be both repetitive and error-prone. 
-Furthermore, without leveraging `gpt-4`, the structured outputs were seldom valid. 
-As for debugging nuances like retries and parsing errors, the in-built tracing leaves much to be desired.
+In September 2023, I tried to port [MealByMeal](https://mealbymeal.app/), a production LLM-based application, over to LangChain. 
+Caching wasn't supported for chat-based endpoints (specifically for `gpt-3.5-turbo`).
+Additionally, the interface for interacting with these endpoints felt quite awkward.
+Since then, LangChain Expression Language (LCEL) was introduced, but handling and enforcing typed outputs is still repetitive and error-prone. 
+Furthermore, without leveraging `gpt-4`, the structured outputs are seldom valid. 
+For debugging nuances like retries and parsing errors, the in-built tracing leaves much to be desired.
 All of these issues led me to create my own lightweight library.
 
 ## How does Elelem compare to LangChain?
@@ -30,14 +29,71 @@ All of these issues led me to create my own lightweight library.
 | Vector store support                       | ❌      | ✅         |
 | A million other features                   | ❌      | ✅         |
 
-## Example Usage
+## Example
 
-```
-yarn add elelem
-```
+Install with `npm install elelem` or `yarn add elelem`.
 
+You'll need `yarn add zod openai` and `yarn add ioredis` if you're using Redis for caching (see `src/elelem.test.ts` for an example of setting up caching).
+
+Usage:
 ```typescript
-// todo
+import { z } from "zod";
+import OpenAI from "openai";
+import { elelem, JsonSchemaAndExampleFormatter } from "elelem";
+
+const capitolResponseSchema = z.object({
+    capitol: z.string(),
+});
+
+const cityResponseSchema = z.object({
+    foundingYear: z.string(),
+    populationEstimate: z.number(),
+});
+
+const llm = elelem.init({
+    openai: new OpenAI({ apiKey: process.env.OPENAI_API_KEY })
+});
+
+const inputCountry = "USA";
+
+(async () => {
+    const { result, usage } = await llm.session(
+        "capitol-info-retriever",
+        { model: "gpt-3.5-turbo" },
+        async (c) => {
+            const { result: capitol } = await c.singleChat(
+                "get-capitol",
+                { max_tokens: 100, temperature: 0 },
+                `What is the capitol of the country provided?`,
+                inputCountry,
+                capitolResponseSchema,
+                JsonSchemaAndExampleFormatter,
+            );
+
+            const { result: cityDescription } = await c.singleChat(
+                "city-description",
+                { max_tokens: 100, temperature: 0 },
+                `For the given capitol city, return the founding year and an estimate of the population of the city.`,
+                capitol.capitol,
+                cityResponseSchema,
+                JsonSchemaAndExampleFormatter,
+            );
+
+            return cityDescription;
+        },
+    );
+
+    console.log(result);
+    // { foundingYear: '1790', populationEstimate: 705749 }
+
+    console.log(usage);
+    // {
+    //     completion_tokens: 26,
+    //     prompt_tokens: 695,
+    //     total_tokens: 721,
+    //     cost_usd: 0.0010945
+    // }
+})();
 ```
 
 ## Viewing Traces on Jaeger
@@ -81,6 +137,10 @@ process.on('SIGTERM', () => {
 ```
 
 When you run your code, your traces will be available at http://localhost:16686/.
+
+### What do the traces look like in Jaeger?
+
+![Exploring Traces in Jaeger](https://i.imgur.com/1DGWd6O.gif)
 
 ### Tracing in Production
 

@@ -12,8 +12,7 @@ import {
   LangchainJsonSchemaFormatter,
 } from "./formatters";
 import { ConsoleSpanExporter } from "@opentelemetry/sdk-trace-node";
-import {ElelemUsage} from "./types";
-import {ElelemError} from "./tracing";
+import { ElelemUsage, ElelemError } from "./types";
 
 const sdk = new opentelemetry.NodeSDK({
   serviceName: "elelem-test",
@@ -206,8 +205,6 @@ describe("elelem", () => {
       await llm
         .session("invalid-format", { model: "gpt-3.5-turbo" }, async (c) => {
           try {
-            // todo: move cache out to before to only do once?
-            // todo: move cache write to before parsing
             const { result: cityDescription } = await c.singleChat(
               "city-description",
               {

@@ -1,2 +1,3 @@
 export { elelem } from "./elelem";
-// todo: export other types here
+export * from "./formatters";
+export * from "./types";

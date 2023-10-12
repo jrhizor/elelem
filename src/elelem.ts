@@ -14,11 +14,17 @@ import {
   ElelemConfigAttributes,
   ElelemContext,
   ElelemFormatter,
-  ElelemModelOptions, ElelemUsage,
+  ElelemModelOptions,
+  ElelemUsage,
+  ElelemError,
 } from "./types";
-import {estimateCost} from "./costs";
-import {getCache} from "./caching";
-import {ElelemError, setElelemConfigAttributes, setUsageAttributes} from "./tracing";
+import { estimateCost } from "./costs";
+import { getCache } from "./caching";
+import { setElelemConfigAttributes, setUsageAttributes } from "./tracing";
+
+function getTracer() {
+  return trace.getTracer("elelem", "0.0.1");
+}
 
 const callApi = async (
   openai: OpenAI,
@@ -29,7 +35,7 @@ const callApi = async (
   localUsage: ElelemUsage,
   sessionUsage: ElelemUsage,
 ): Promise<string> => {
-  return await tracer.startActiveSpan(`openai-call`, async (span) => {
+  return await getTracer().startActiveSpan(`openai-call`, async (span) => {
     span.setAttribute("openai.prompt.system", systemPromptWithFormat);
     span.setAttribute("openai.prompt.user", userPrompt);
 
@@ -87,8 +93,6 @@ const callApi = async (
   });
 };
 
-const tracer = trace.getTracer("elelem", "0.0.1");
-
 async function withRetries<T>(
   spanName: string,
   operation: (span: Span, parentSpan: Span) => Promise<T>,
@@ -96,10 +100,10 @@ async function withRetries<T>(
 ): Promise<T> {
   let attemptCounter = 0;
 
-  return await tracer.startActiveSpan(spanName, async (parentSpan) => {
+  return await getTracer().startActiveSpan(spanName, async (parentSpan) => {
     try {
       return await backOff(async () => {
-        return tracer.startActiveSpan(
+        return getTracer().startActiveSpan(
           `${spanName}-attempt-${attemptCounter}`,
           async (span) => {
             try {
@@ -140,7 +144,7 @@ export const elelem: Elelem = {
           cost_usd: 0,
         };
 
-        return tracer.startActiveSpan(sessionId, async (sessionSpan) => {
+        return getTracer().startActiveSpan(sessionId, async (sessionSpan) => {
           try {
             const context: ElelemContext = {
               singleChat: async (
@@ -218,7 +222,7 @@ export const elelem: Elelem = {
                             sessionUsage,
                           );
 
-                      return await tracer.startActiveSpan(
+                      return await getTracer().startActiveSpan(
                         `parse-response`,
                         async (parseSpan) => {
                           try {
