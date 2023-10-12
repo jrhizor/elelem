@@ -1,0 +1,14 @@
+{
+  "compilerOptions": {
+    "strict": true,
+    "incremental": true,
+    "esModuleInterop": true,
+    "module": "commonjs",
+    "target": "es2019",
+    "declaration": true,
+    "outDir": "./dist"
+  },
+  "include": [
+    "src/**/*"
+  ]
+}
