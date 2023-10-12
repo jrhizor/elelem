@@ -5,7 +5,7 @@ Elelem is a simple, opinionated, JSON-typed, and traced LLM framework in TypeScr
 
 ## Why another LLM library?
 
-In September 2023, I tried to port [MealByMeal](https://mealbymeal.app/), a production LLM-based application, over to LangChain. 
+In September 2023, I tried to port [MealByMeal](https://mealbymeal.com/), a production LLM-based application, over to LangChain. 
 Caching wasn't supported for chat-based endpoints (specifically for `gpt-3.5-turbo`).
 Additionally, the interface for interacting with these endpoints felt quite awkward.
 Since then, LangChain Expression Language (LCEL) was introduced, but handling and enforcing typed outputs is still repetitive and error-prone. 
