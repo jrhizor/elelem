@@ -57,7 +57,7 @@ afterAll(async () => {
     .catch((error) => console.log("Error terminating tracing", error));
 });
 
-describe("elelem", () => {
+describe("singleChat", () => {
   test("e2e example", async () => {
     const { result, usage } = await llm.session(
       "e2e-example",
@@ -254,4 +254,70 @@ describe("elelem", () => {
     // langchain formatter is worse than the one that includes examples, so this should fail with the same prompt
     await expect(wrapper()).rejects.toThrowError(ElelemError);
   }, 10000);
+});
+
+interface AddContext {
+  unique: number;
+  a: number;
+  b: number;
+}
+
+describe("action", () => {
+  test("simple", async () => {
+    const { result } = await llm.session(
+      "action-test",
+      { model: "gpt-3.5-turbo" },
+      async (c) => {
+        return await c.action<AddContext, number>(
+          "add",
+          { unique: Math.random(), a: 1, b: 2 },
+          JSON.stringify,
+          JSON.parse,
+          async (ac: AddContext): Promise<number> => {
+            return ac.a + ac.b;
+          },
+        );
+      },
+    );
+
+    expect(result).toBe(3);
+  });
+
+  test("cached", async () => {
+    let counter = 0;
+
+    async function add(ac: AddContext): Promise<number> {
+      counter += 1;
+      return ac.a + ac.b;
+    }
+
+    const { result } = await llm.session(
+      "action-test",
+      { model: "gpt-3.5-turbo" },
+      async (c) => {
+        const unique = Math.random();
+
+        const uncachedResult = await c.action<AddContext, number>(
+          "add",
+          { unique: unique, a: 1, b: 2 },
+          JSON.stringify,
+          JSON.parse,
+          add,
+        );
+
+        const cachedResult = await c.action<AddContext, number>(
+          "add",
+          { unique: unique, a: 1, b: 2 },
+          JSON.stringify,
+          JSON.parse,
+          add,
+        );
+
+        return uncachedResult + cachedResult;
+      },
+    );
+
+    expect(result).toBe(6);
+    expect(counter).toBe(1);
+  });
 });

@@ -21,6 +21,7 @@ import {
 import { estimateCost } from "./costs";
 import { getCache } from "./caching";
 import { setElelemConfigAttributes, setUsageAttributes } from "./tracing";
+import objectHash from "object-hash";
 
 function getTracer() {
   return trace.getTracer("elelem", "0.0.1");
@@ -316,6 +317,62 @@ export const elelem: Elelem = {
                     }
                   },
                   backoffOptions || { numOfAttempts: 3 },
+                );
+              },
+              action: async <AC extends object, T>(
+                actionId: string,
+                actionContext: AC,
+                cacheSerializer: (cacheValue: T) => string,
+                cacheDeserializer: (cacheValue: string) => T,
+                operation: (
+                  actionContext: AC,
+                  span: Span,
+                  parentSpan: Span,
+                ) => Promise<T>,
+                backoffOptions?: Partial<BackoffOptions>,
+              ): Promise<T> => {
+                return await withRetries(
+                  actionId,
+                  async (span, parentSpan) => {
+                    const cacheValue = await withRetries(
+                      "cache-read",
+                      async (cacheReadSpan) => {
+                        const cacheResult = await cache.read(actionContext);
+                        cacheReadSpan.setAttribute(
+                          "elelem.cache.hit",
+                          cacheResult !== null,
+                        );
+                        cacheReadSpan.end();
+                        return cacheResult;
+                      },
+                      backoffOptions || { numOfAttempts: 3 },
+                    );
+
+                    if (cacheValue) {
+                      return cacheDeserializer(cacheValue);
+                    } else {
+                      const result = await operation(
+                        actionContext,
+                        span,
+                        parentSpan,
+                      );
+
+                      await withRetries(
+                        "cache-write",
+                        async (cacheReadSpan) => {
+                          await cache.write(
+                            actionContext,
+                            cacheSerializer(result),
+                          );
+                          cacheReadSpan.end();
+                        },
+                        backoffOptions || { numOfAttempts: 3 },
+                      );
+
+                      return result;
+                    }
+                  },
+                  backoffOptions,
                 );
               },
             };
