@@ -4,6 +4,7 @@ import OpenAI from "openai";
 import { ZodType } from "zod";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
 import { CompletionUsage } from "openai/resources";
+import { Span } from "@opentelemetry/api";
 
 export interface ElelemCache {
   // keys will be hashed using object-hash
@@ -51,6 +52,15 @@ export interface ElelemContext {
     schema: ZodType<T>,
     formatter: ElelemFormatter,
   ) => Promise<{ result: T; usage: ElelemUsage }>;
+
+  action: <AC extends object, T>(
+    actionId: string,
+    actionContext: AC,
+    cacheSerializer: (cacheValue: T) => string,
+    cacheDeserializer: (cacheValue: string) => T,
+    operation: (actionContext: AC, span: Span, parentSpan: Span) => Promise<T>,
+    backoffOptions?: Partial<BackoffOptions>,
+  ) => Promise<T>;
 }
 
 export interface ElelemConfigAttributes {
