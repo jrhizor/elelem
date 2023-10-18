@@ -21,7 +21,7 @@ ${JSON.stringify(zodToJsonSchema(schema))}
 `;
 };
 
-export const akerExampleFormatter: ElelemFormatter = <T>(
+export const FakerExampleFormatter: ElelemFormatter = <T>(
   schema: ZodType<T>,
 ) => {
   return `
