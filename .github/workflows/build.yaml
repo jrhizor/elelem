@@ -50,6 +50,7 @@ jobs:
         env:
           CI: true
           OPENAI_API_KEY: ${{ secrets.OPENAI_API_KEY }}
+          COHERE_API_KEY: ${{ secrets.COHERE_API_KEY }}
           REDIS: "redis://localhost:6379"
           FLY_API_TOKEN: ${{ secrets.FLY_API_TOKEN }}
         run: yarn test --verbose
