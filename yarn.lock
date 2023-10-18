@@ -1272,6 +1272,11 @@ co@^4.6.0:
   resolved "https://registry.yarnpkg.com/co/-/co-4.6.0.tgz#6ea6bdf3d853ae54ccb8e47bfa0bf3f9031fb184"
   integrity sha512-QVb0dM5HvG+uaxitm8wONl7jltx8dqhfU33DcqtOZcLSVIKSDDLDi7+0LbAKiyI8hD9u42m2YxXSkMGWThaecQ==
 
+cohere-ai@^6.2.2:
+  version "6.2.2"
+  resolved "https://registry.yarnpkg.com/cohere-ai/-/cohere-ai-6.2.2.tgz#ea3a01d5bad839ffb006e8ec793c034a951cca7e"
+  integrity sha512-+Tq+4e8N/YWKJqFpWaULsfbZR/GOvGh8WWYFKR1bpipu8bCok3VcbTPnBmIToQiIqOgFpGk3HsA4b0guVyL3vg==
+
 collect-v8-coverage@^1.0.0:
   version "1.0.2"
   resolved "https://registry.yarnpkg.com/collect-v8-coverage/-/collect-v8-coverage-1.0.2.tgz#c0b29bcd33bcd0779a1344c2136051e6afd3d9e9"

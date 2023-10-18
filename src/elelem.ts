@@ -1,5 +1,9 @@
 import type OpenAI from "openai";
-import { backOff, type BackoffOptions } from "exponential-backoff";
+import {
+  backOff,
+  type BackoffOptions,
+  IBackOffOptions,
+} from "exponential-backoff";
 import {
   type Exception,
   type Span,
@@ -17,21 +21,25 @@ import {
   ElelemModelOptions,
   ElelemUsage,
   ElelemError,
+  PartialElelemModelOptions,
+  Cohere,
 } from "./types";
 import { estimateCost } from "./costs";
 import { getCache } from "./caching";
 import { setElelemConfigAttributes, setUsageAttributes } from "./tracing";
-import objectHash from "object-hash";
+import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
+import { ZodType } from "zod";
+import { generateRequest } from "cohere-ai/dist/models";
 
 function getTracer() {
   return trace.getTracer("elelem", "0.0.1");
 }
 
-const callApi = async (
+const callOpenAIApi = async (
   openai: OpenAI,
   systemPromptWithFormat: string,
   userPrompt: string,
-  modelOptions: ElelemModelOptions,
+  modelOptions: Omit<ChatCompletionCreateParamsNonStreaming, "messages">,
   localAttemptUsage: ElelemUsage,
   localUsage: ElelemUsage,
   sessionUsage: ElelemUsage,
@@ -94,6 +102,35 @@ const callApi = async (
   });
 };
 
+const callCohereApi = async (
+  cohere: Cohere,
+  systemPromptWithFormat: string,
+  userPrompt: string,
+  modelOptions: Omit<generateRequest, "prompt"> & { max_tokens: number },
+): Promise<string> => {
+  return await getTracer().startActiveSpan(`cohere-call`, async (span) => {
+    span.setAttribute("cohere.prompt.system", systemPromptWithFormat);
+    span.setAttribute("cohere.prompt.user", userPrompt);
+
+    const response = await cohere.generate({
+      ...modelOptions,
+      prompt: `${systemPromptWithFormat}\n${userPrompt}`,
+    });
+
+    if (response.statusCode !== 200) {
+      span.end();
+      throw new Error("Error code from api!");
+    }
+
+    // todo: add cost calculation once available if cohere supports it in the future
+
+    span.setAttribute("cohere.response", response.body.generations[0].text);
+
+    span.end();
+    return response.body.generations[0].text;
+  });
+};
+
 async function withRetries<T>(
   spanName: string,
   operation: (span: Span, parentSpan: Span) => Promise<T>,
@@ -130,9 +167,170 @@ async function withRetries<T>(
   });
 }
 
+async function generate<T, ModelOpt>(
+  chatId: string,
+  combinedOptions: ModelOpt,
+  systemPrompt: string,
+  userPrompt: string,
+  schema: ZodType<T>,
+  formatter: ElelemFormatter,
+  backoffOptions: Partial<IBackOffOptions> | undefined,
+  cache: ElelemCache,
+  apiCaller: (
+    systemPromptWithFormat: string,
+    userPrompt: string,
+    combinedOptions: ModelOpt,
+    generateAttemptUsage: ElelemUsage,
+    generateUsage: ElelemUsage,
+  ) => Promise<string>,
+): Promise<{ result: T; usage: ElelemUsage }> {
+  const generateUsage: ElelemUsage = {
+    completion_tokens: 0,
+    prompt_tokens: 0,
+    total_tokens: 0,
+    cost_usd: 0,
+  };
+
+  return await withRetries(
+    chatId,
+    async (generateAttemptSpan, generateSpan) => {
+      let cacheHit = false;
+      let error: string | null = null;
+      let response: string | null = null;
+      let extractedJson: string | null = null;
+
+      const systemPromptWithFormat = `${systemPrompt}\n${formatter(schema)}`;
+
+      const generateAttemptUsage: ElelemUsage = {
+        completion_tokens: 0,
+        prompt_tokens: 0,
+        total_tokens: 0,
+        cost_usd: 0,
+      };
+
+      try {
+        const cacheKey = {
+          systemPromptWithFormat,
+          userPrompt,
+          combinedOptions,
+        };
+
+        const cached = await withRetries(
+          "cache-read",
+          async (cacheReadSpan) => {
+            const cacheResult = await cache.read(cacheKey);
+            cacheReadSpan.setAttribute(
+              "elelem.cache.hit",
+              cacheResult !== null,
+            );
+            cacheReadSpan.end();
+            return cacheResult;
+          },
+          backoffOptions || { numOfAttempts: 3 },
+        );
+
+        cacheHit =
+          cached !== null && schema.safeParse(JSON.parse(cached)).success;
+        response = cacheHit
+          ? cached
+          : await apiCaller(
+              systemPromptWithFormat,
+              userPrompt,
+              combinedOptions,
+              generateAttemptUsage,
+              generateUsage,
+            );
+
+        return await getTracer().startActiveSpan(
+          `parse-response`,
+          async (parseSpan) => {
+            try {
+              if (response === null) {
+                throw new Error("Null response");
+              }
+
+              extractedJson = extractLastJSON(response);
+
+              if (extractedJson === null) {
+                throw new Error("No JSON available in response");
+              }
+
+              const parsed = schema.safeParse(JSON.parse(extractedJson));
+
+              if (!parsed.success) {
+                throw new Error(
+                  `Invalid schema returned from LLM: ${parsed.error.toString()}`,
+                );
+              } else {
+                const nonNullJson: string = extractedJson;
+
+                if (!cacheHit) {
+                  await withRetries(
+                    "cache-write",
+                    async (cacheReadSpan) => {
+                      await cache.write(cacheKey, nonNullJson);
+                      cacheReadSpan.end();
+                    },
+                    backoffOptions || { numOfAttempts: 3 },
+                  );
+                }
+
+                return {
+                  result: parsed.data,
+
+                  // should represent total across all attempts
+                  usage: generateUsage,
+                };
+              }
+            } catch (error) {
+              parseSpan.recordException(error as Exception);
+              parseSpan.setStatus({ code: SpanStatusCode.ERROR });
+              throw error;
+            } finally {
+              parseSpan.end();
+            }
+          },
+        );
+      } catch (e) {
+        generateAttemptSpan.recordException(e as Error);
+        generateAttemptSpan.setStatus({
+          code: SpanStatusCode.ERROR,
+        });
+        error = String(e);
+        throw new ElelemError(
+          (e as Error).message,
+          // should represent total so far across attempts
+          generateUsage,
+        );
+      } finally {
+        const attributes: ElelemConfigAttributes = {
+          "elelem.cache.hit": cacheHit,
+          "elelem.error": error || "null",
+          "openai.prompt.options": JSON.stringify(combinedOptions),
+          "openai.prompt.system": systemPromptWithFormat,
+          "openai.prompt.user": userPrompt,
+          "openai.prompt.response": response || "null",
+          "openai.prompt.response.extracted": extractedJson || "null",
+        };
+
+        // handle attempt attributes
+        setElelemConfigAttributes(generateAttemptSpan, attributes);
+        setUsageAttributes(generateAttemptSpan, generateAttemptUsage);
+
+        // handle the parent attributes each attempt
+        setElelemConfigAttributes(generateSpan, attributes);
+        setUsageAttributes(generateSpan, generateUsage);
+
+        generateAttemptSpan.end();
+      }
+    },
+    backoffOptions || { numOfAttempts: 3 },
+  );
+}
+
 export const elelem: Elelem = {
   init: (config: ElelemConfig) => {
-    const { backoffOptions, cache: cacheConfig, openai } = config;
+    const { backoffOptions, cache: cacheConfig, openai, cohere } = config;
 
     const cache: ElelemCache = getCache(cacheConfig || {});
 
@@ -148,7 +346,7 @@ export const elelem: Elelem = {
         return getTracer().startActiveSpan(sessionId, async (sessionSpan) => {
           try {
             const context: ElelemContext = {
-              singleChat: async (
+              openai: async (
                 chatId,
                 modelOptions,
                 systemPrompt,
@@ -156,167 +354,96 @@ export const elelem: Elelem = {
                 schema,
                 formatter: ElelemFormatter,
               ) => {
-                const singleChatUsage: ElelemUsage = {
-                  completion_tokens: 0,
-                  prompt_tokens: 0,
-                  total_tokens: 0,
-                  cost_usd: 0,
+                if (
+                  openai === undefined ||
+                  defaultModelOptions.openai === undefined
+                ) {
+                  throw new Error("You must configure OpenAI!");
+                }
+
+                const apiCaller = async (
+                  systemPromptWithFormat: string,
+                  userPrompt: string,
+                  combinedOptions: Omit<
+                    ChatCompletionCreateParamsNonStreaming,
+                    "messages"
+                  >,
+                  generateAttemptUsage: ElelemUsage,
+                  generateUsage: ElelemUsage,
+                ): Promise<string> => {
+                  return await callOpenAIApi(
+                    openai,
+                    systemPromptWithFormat,
+                    userPrompt,
+                    combinedOptions,
+                    generateAttemptUsage,
+                    generateUsage,
+                    sessionUsage,
+                  );
                 };
 
-                return await withRetries(
+                const combinedOptions = {
+                  ...defaultModelOptions.openai,
+                  ...modelOptions,
+                };
+
+                return await generate(
                   chatId,
-                  async (singleChatAttemptSpan, singleChatSpan) => {
-                    const combinedOptions = {
-                      ...defaultModelOptions,
-                      ...modelOptions,
-                    };
+                  combinedOptions,
+                  systemPrompt,
+                  userPrompt,
+                  schema,
+                  formatter,
+                  backoffOptions,
+                  cache,
+                  apiCaller,
+                );
+              },
+              cohere: async (
+                chatId,
+                modelOptions,
+                systemPrompt,
+                userPrompt,
+                schema,
+                formatter: ElelemFormatter,
+              ) => {
+                if (cohere === undefined) {
+                  throw new Error("You must configure Cohere!");
+                }
 
-                    let cacheHit = false;
-                    let error: string | null = null;
-                    let response: string | null = null;
-                    let extractedJson: string | null = null;
-
-                    const systemPromptWithFormat = `${systemPrompt}\n${formatter(
-                      schema,
-                    )}`;
-
-                    const singleChatAttemptUsage: ElelemUsage = {
-                      completion_tokens: 0,
-                      prompt_tokens: 0,
-                      total_tokens: 0,
-                      cost_usd: 0,
-                    };
-
-                    try {
-                      const cacheKey = {
-                        systemPromptWithFormat,
-                        userPrompt,
-                        combinedOptions,
-                      };
-
-                      const cached = await withRetries(
-                        "cache-read",
-                        async (cacheReadSpan) => {
-                          const cacheResult = await cache.read(cacheKey);
-                          cacheReadSpan.setAttribute(
-                            "elelem.cache.hit",
-                            cacheResult !== null,
-                          );
-                          cacheReadSpan.end();
-                          return cacheResult;
-                        },
-                        backoffOptions || { numOfAttempts: 3 },
-                      );
-
-                      cacheHit =
-                        cached !== null &&
-                        schema.safeParse(JSON.parse(cached)).success;
-                      response = cacheHit
-                        ? cached
-                        : await callApi(
-                            openai,
-                            systemPromptWithFormat,
-                            userPrompt,
-                            combinedOptions,
-                            singleChatAttemptUsage,
-                            singleChatUsage,
-                            sessionUsage,
-                          );
-
-                      return await getTracer().startActiveSpan(
-                        `parse-response`,
-                        async (parseSpan) => {
-                          try {
-                            if (response === null) {
-                              throw new Error("Null response");
-                            }
-
-                            extractedJson = extractLastJSON(response);
-
-                            if (extractedJson === null) {
-                              throw new Error("No JSON available in response");
-                            }
-
-                            const parsed = schema.safeParse(
-                              JSON.parse(extractedJson),
-                            );
-
-                            if (!parsed.success) {
-                              throw new Error(
-                                `Invalid schema returned from LLM: ${parsed.error.toString()}`,
-                              );
-                            } else {
-                              const nonNullJson: string = extractedJson;
-
-                              if (!cacheHit) {
-                                await withRetries(
-                                  "cache-write",
-                                  async (cacheReadSpan) => {
-                                    await cache.write(cacheKey, nonNullJson);
-                                    cacheReadSpan.end();
-                                  },
-                                  backoffOptions || { numOfAttempts: 3 },
-                                );
-                              }
-
-                              return {
-                                result: parsed.data,
-
-                                // should represent total across all attempts
-                                usage: singleChatUsage,
-                              };
-                            }
-                          } catch (error) {
-                            parseSpan.recordException(error as Exception);
-                            parseSpan.setStatus({ code: SpanStatusCode.ERROR });
-                            throw error;
-                          } finally {
-                            parseSpan.end();
-                          }
-                        },
-                      );
-                    } catch (e) {
-                      singleChatAttemptSpan.recordException(e as Error);
-                      singleChatAttemptSpan.setStatus({
-                        code: SpanStatusCode.ERROR,
-                      });
-                      error = String(e);
-                      throw new ElelemError(
-                        (e as Error).message,
-                        // should represent total so far across attempts
-                        singleChatUsage,
-                      );
-                    } finally {
-                      const attributes: ElelemConfigAttributes = {
-                        "elelem.cache.hit": cacheHit,
-                        "elelem.error": error || "null",
-                        "openai.prompt.options":
-                          JSON.stringify(combinedOptions),
-                        "openai.prompt.system": systemPromptWithFormat,
-                        "openai.prompt.user": userPrompt,
-                        "openai.prompt.response": response || "null",
-                        "openai.prompt.response.extracted":
-                          extractedJson || "null",
-                      };
-
-                      // handle attempt attributes
-                      setElelemConfigAttributes(
-                        singleChatAttemptSpan,
-                        attributes,
-                      );
-                      setUsageAttributes(
-                        singleChatAttemptSpan,
-                        singleChatAttemptUsage,
-                      );
-
-                      // handle the parent attributes each attempt
-                      setElelemConfigAttributes(singleChatSpan, attributes);
-                      setUsageAttributes(singleChatSpan, singleChatUsage);
-
-                      singleChatAttemptSpan.end();
-                    }
+                const apiCaller = async (
+                  systemPromptWithFormat: string,
+                  userPrompt: string,
+                  combinedOptions: Omit<generateRequest, "prompt"> & {
+                    max_tokens: number;
                   },
-                  backoffOptions || { numOfAttempts: 3 },
+                ): Promise<string> => {
+                  return await callCohereApi(
+                    cohere,
+                    systemPromptWithFormat,
+                    userPrompt,
+                    combinedOptions,
+                  );
+                };
+
+                const combinedOptions: Omit<generateRequest, "prompt"> & {
+                  max_tokens: number;
+                } = {
+                  ...{ max_tokens: 100 },
+                  ...defaultModelOptions.cohere,
+                  ...modelOptions,
+                };
+
+                return await generate(
+                  chatId,
+                  combinedOptions,
+                  systemPrompt,
+                  userPrompt,
+                  schema,
+                  formatter,
+                  backoffOptions,
+                  cache,
+                  apiCaller,
                 );
               },
               action: async <AC extends object, T>(

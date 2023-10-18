@@ -5,6 +5,11 @@ import { ZodType } from "zod";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
 import { CompletionUsage } from "openai/resources";
 import { Span } from "@opentelemetry/api";
+import {
+  cohereResponse,
+  generateRequest,
+  generateResponse,
+} from "cohere-ai/dist/models";
 
 export interface ElelemCache {
   // keys will be hashed using object-hash
@@ -17,11 +22,24 @@ export interface ElelemCacheConfig {
   custom?: ElelemCache;
 }
 
+export interface CohereGenerateBaseConfig {
+  model: string;
+  max_tokens: number;
+  temperature: number;
+}
+
+export interface Cohere {
+  generate: (
+    config: generateRequest,
+  ) => Promise<cohereResponse<generateResponse>>;
+}
+
 export interface ElelemConfig {
   // only applies to the whole "singleChat", not cache retries, which always use the default behavior
   backoffOptions?: BackoffOptions;
   cache?: ElelemCacheConfig;
-  openai: OpenAI;
+  openai?: OpenAI;
+  cohere?: Cohere;
 }
 
 export interface Elelem {
@@ -30,10 +48,15 @@ export interface Elelem {
 
 export type ElelemFormatter = <T>(schema: ZodType<T>) => string;
 
-export type ElelemModelOptions = Omit<
-  ChatCompletionCreateParamsNonStreaming,
-  "messages"
->;
+export interface ElelemModelOptions {
+  openai?: Omit<ChatCompletionCreateParamsNonStreaming, "messages">;
+  cohere?: Partial<Omit<generateRequest, "prompt">>;
+}
+
+export interface PartialElelemModelOptions {
+  openai?: Partial<Omit<ChatCompletionCreateParamsNonStreaming, "messages">>;
+  cohere?: Partial<Omit<generateRequest, "prompt">>;
+}
 
 export interface InitializedElelem {
   session: <T>(
@@ -44,9 +67,20 @@ export interface InitializedElelem {
 }
 
 export interface ElelemContext {
-  singleChat: <T>(
+  openai: <T>(
     chatId: string,
-    modelOptions: Partial<ElelemModelOptions>,
+    modelOptions: Partial<
+      Omit<ChatCompletionCreateParamsNonStreaming, "messages">
+    >,
+    systemPrompt: string,
+    userPrompt: string,
+    schema: ZodType<T>,
+    formatter: ElelemFormatter,
+  ) => Promise<{ result: T; usage: ElelemUsage }>;
+
+  cohere: <T>(
+    chatId: string,
+    modelOptions: Partial<Omit<generateRequest, "prompt">>,
     systemPrompt: string,
     userPrompt: string,
     schema: ZodType<T>,
