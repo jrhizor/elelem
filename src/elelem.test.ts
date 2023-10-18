@@ -4,6 +4,8 @@ import { z } from "zod";
 import { elelem } from "./elelem";
 import { describe, expect, test, afterAll } from "@jest/globals";
 import { config } from "dotenv";
+import cohere from "cohere-ai";
+import { ElelemUsage, ElelemError } from "./types";
 
 import * as opentelemetry from "@opentelemetry/sdk-node";
 import { OTLPTraceExporter } from "@opentelemetry/exporter-trace-otlp-proto";
@@ -12,7 +14,6 @@ import {
   LangchainJsonSchemaFormatter,
 } from "./formatters";
 import { ConsoleSpanExporter } from "@opentelemetry/sdk-trace-node";
-import { ElelemUsage, ElelemError } from "./types";
 
 const sdk = new opentelemetry.NodeSDK({
   serviceName: "elelem-test",
@@ -27,9 +28,11 @@ config();
 
 const redisClient = new Redis(process.env.REDIS!);
 const openAiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
+cohere.init(process.env.COHERE_API_KEY || "");
 
 const llm = elelem.init({
   openai: openAiClient,
+  cohere: cohere,
   cache: { redis: redisClient },
 });
 
@@ -57,13 +60,13 @@ afterAll(async () => {
     .catch((error) => console.log("Error terminating tracing", error));
 });
 
-describe("singleChat", () => {
+describe("openai", () => {
   test("e2e example", async () => {
     const { result, usage } = await llm.session(
       "e2e-example",
-      { model: "gpt-3.5-turbo" },
+      { openai: { model: "gpt-3.5-turbo" } },
       async (c) => {
-        const { result: capitol } = await c.singleChat(
+        const { result: capitol } = await c.openai(
           "capitol",
           { max_tokens: 100, temperature: 0 },
           `What is the capitol of the country provided?`,
@@ -73,7 +76,7 @@ describe("singleChat", () => {
         );
         console.log("capitol", capitol);
 
-        const { result: cityDescription } = await c.singleChat(
+        const { result: cityDescription } = await c.openai(
           "city-description",
           {
             max_tokens: 100,
@@ -102,9 +105,9 @@ describe("singleChat", () => {
     const fn = async (id: string) => {
       const { usage } = await llm.session(
         id,
-        { model: "gpt-3.5-turbo" },
+        { openai: { model: "gpt-3.5-turbo" } },
         async (c) => {
-          return await c.singleChat(
+          return await c.openai(
             id,
             { max_tokens: 100, temperature: 0 },
             `Wrap the input string in the json format.`,
@@ -148,9 +151,9 @@ describe("singleChat", () => {
 
     const { usage: totalUsage } = await llm.session(
       "sum-tokens-test",
-      { model: "gpt-3.5-turbo" },
+      { openai: { model: "gpt-3.5-turbo" } },
       async (c) => {
-        const { usage: u1 } = await c.singleChat(
+        const { usage: u1 } = await c.openai(
           "first-call",
           { max_tokens: 100, temperature: 0 },
           `Wrap the input string in the json format.`,
@@ -159,7 +162,7 @@ describe("singleChat", () => {
           JsonSchemaAndExampleFormatter,
         );
 
-        const { usage: u2 } = await c.singleChat(
+        const { usage: u2 } = await c.openai(
           "second-call",
           { max_tokens: 100, temperature: 0 },
           `Wrap the input string in the json format.`,
@@ -203,39 +206,43 @@ describe("singleChat", () => {
 
     const wrapper = async () => {
       await llm
-        .session("invalid-format", { model: "gpt-3.5-turbo" }, async (c) => {
-          try {
-            const { result: cityDescription } = await c.singleChat(
-              "city-description",
-              {
-                max_tokens: 100,
-                temperature: 0,
-              },
-              `Request ${Math.random()}\nFor the given capitol city, return the founding year and an estimate of the population of the city.`,
-              "Washington, D.C.",
-              cityResponseSchema,
-              LangchainJsonSchemaFormatter,
-            );
-            return cityDescription;
-          } catch (e) {
-            // check that we're returning usage for the individual attempts
-            if (e instanceof ElelemError) {
-              expect(e.usage.prompt_tokens).toBeGreaterThan(0);
-              expect(e.usage.completion_tokens).toBeGreaterThan(0);
-              expect(e.usage.total_tokens).toBeGreaterThan(0);
-              expect(e.usage.cost_usd).toBeGreaterThan(0);
+        .session(
+          "invalid-format",
+          { openai: { model: "gpt-3.5-turbo" } },
+          async (c) => {
+            try {
+              const { result: cityDescription } = await c.openai(
+                "city-description",
+                {
+                  max_tokens: 100,
+                  temperature: 0,
+                },
+                `Request ${Math.random()}\nFor the given capitol city, return the founding year and an estimate of the population of the city.`,
+                "Washington, D.C.",
+                cityResponseSchema,
+                LangchainJsonSchemaFormatter,
+              );
+              return cityDescription;
+            } catch (e) {
+              // check that we're returning usage for the individual attempts
+              if (e instanceof ElelemError) {
+                expect(e.usage.prompt_tokens).toBeGreaterThan(0);
+                expect(e.usage.completion_tokens).toBeGreaterThan(0);
+                expect(e.usage.total_tokens).toBeGreaterThan(0);
+                expect(e.usage.cost_usd).toBeGreaterThan(0);
 
-              usage.prompt_tokens += e.usage.prompt_tokens;
-              usage.completion_tokens += e.usage.completion_tokens;
-              usage.total_tokens += e.usage.total_tokens;
-              usage.cost_usd += e.usage.cost_usd;
-            } else {
-              // this should never happen!
-              expect(true).toBe(false);
+                usage.prompt_tokens += e.usage.prompt_tokens;
+                usage.completion_tokens += e.usage.completion_tokens;
+                usage.total_tokens += e.usage.total_tokens;
+                usage.cost_usd += e.usage.cost_usd;
+              } else {
+                // this should never happen!
+                expect(true).toBe(false);
+              }
+              throw e;
             }
-            throw e;
-          }
-        })
+          },
+        )
         .catch((e) => {
           // check that we're returning usage for the session
           if (e instanceof ElelemError) {
@@ -256,6 +263,73 @@ describe("singleChat", () => {
   }, 10000);
 });
 
+describe("cohere", () => {
+  test("e2e example", async () => {
+    const { result, usage } = await llm.session(
+      "e2e-example",
+      { cohere: { model: "command" } },
+      async (c) => {
+        const { result: capitol } = await c.cohere(
+          "capitol",
+          { max_tokens: 100, temperature: 0 },
+          `What is the capitol of the country provided?`,
+          "USA",
+          capitolResponseSchema,
+          JsonSchemaAndExampleFormatter,
+        );
+        console.log("capitol", capitol);
+
+        const { result: cityDescription } = await c.cohere(
+          "city-description",
+          {
+            max_tokens: 100,
+            temperature: 0,
+          },
+          `For the given capitol city, return the founding year and an estimate of the population of the city.`,
+          capitol.capitol,
+          cityResponseSchema,
+          JsonSchemaAndExampleFormatter,
+        );
+        console.log("cityDescription", cityDescription);
+
+        return cityDescription;
+      },
+    );
+
+    console.log(result);
+    console.log(usage);
+
+    expect(result.foundingYear).toBe("1800");
+    expect(result.populationEstimate).toBeGreaterThan(500000);
+  }, 10000);
+
+  test("invalid format", async () => {
+    const wrapper = async () => {
+      return await llm.session(
+        "invalid-format",
+        { cohere: { model: "command" } },
+        async (c) => {
+          const { result: cityDescription } = await c.cohere(
+            "city-description",
+            {
+              max_tokens: 100,
+              temperature: 0,
+            },
+            `Request ${Math.random()}\n`,
+            "Washington, D.C.",
+            capitolResponseSchema,
+            LangchainJsonSchemaFormatter,
+          );
+          return cityDescription;
+        },
+      );
+    };
+
+    // langchain formatter is worse than the one that includes examples, so this should fail with the same prompt
+    await expect(wrapper()).rejects.toThrowError(ElelemError);
+  }, 10000);
+});
+
 interface AddContext {
   unique: number;
   a: number;
@@ -266,7 +340,7 @@ describe("action", () => {
   test("simple", async () => {
     const { result } = await llm.session(
       "action-test",
-      { model: "gpt-3.5-turbo" },
+      { openai: { model: "gpt-3.5-turbo" } },
       async (c) => {
         return await c.action<AddContext, number>(
           "add",
@@ -293,7 +367,7 @@ describe("action", () => {
 
     const { result } = await llm.session(
       "action-test",
-      { model: "gpt-3.5-turbo" },
+      { openai: { model: "gpt-3.5-turbo" } },
       async (c) => {
         const unique = Math.random();
 
