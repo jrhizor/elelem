@@ -35,7 +35,7 @@ export interface Cohere {
 }
 
 export interface ElelemConfig {
-  // only applies to the whole "singleChat", not cache retries, which always use the default behavior
+  // only applies to generations, not cache retries, which always use the default behavior
   backoffOptions?: BackoffOptions;
   cache?: ElelemCacheConfig;
   openai?: OpenAI;
