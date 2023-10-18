@@ -434,11 +434,14 @@ export const elelem: Elelem = {
                   ...modelOptions,
                 };
 
+                // since cohere doesn't have actual system prompts, it has trouble identifying where the input starts
+                const prefixedUserPrompt = `\nInput: ${userPrompt}`;
+
                 return await generate(
                   chatId,
                   combinedOptions,
                   systemPrompt,
-                  userPrompt,
+                  prefixedUserPrompt,
                   schema,
                   formatter,
                   backoffOptions,

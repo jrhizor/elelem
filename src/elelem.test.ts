@@ -302,32 +302,6 @@ describe("cohere", () => {
     expect(result.foundingYear).toBe("1800");
     expect(result.populationEstimate).toBeGreaterThan(500000);
   }, 10000);
-
-  test("invalid format", async () => {
-    const wrapper = async () => {
-      return await llm.session(
-        "invalid-format",
-        { cohere: { model: "command" } },
-        async (c) => {
-          const { result: cityDescription } = await c.cohere(
-            "city-description",
-            {
-              max_tokens: 100,
-              temperature: 0,
-            },
-            `Request ${Math.random()}\n`,
-            "Washington, D.C.",
-            capitolResponseSchema,
-            LangchainJsonSchemaFormatter,
-          );
-          return cityDescription;
-        },
-      );
-    };
-
-    // langchain formatter is worse than the one that includes examples, so this should fail with the same prompt
-    await expect(wrapper()).rejects.toThrowError(ElelemError);
-  }, 10000);
 });
 
 interface AddContext {
