@@ -204,10 +204,12 @@ describe("openai", () => {
       cost_usd: 0,
     };
 
+    let attempts = 0;
+
     const wrapper = async () => {
       await llm
         .session(
-          "invalid-format",
+          "invalid-format (temp 0)",
           { openai: { model: "gpt-3.5-turbo" } },
           async (c) => {
             try {
@@ -220,7 +222,10 @@ describe("openai", () => {
                 `Request ${Math.random()}\nFor the given capitol city, return the founding year and an estimate of the population of the city.`,
                 "Washington, D.C.",
                 cityResponseSchema,
-                LangchainJsonSchemaFormatter,
+                (schema) => {
+                  attempts += 1;
+                  return LangchainJsonSchemaFormatter(schema);
+                },
               );
               return cityDescription;
             } catch (e) {
@@ -260,6 +265,81 @@ describe("openai", () => {
 
     // langchain formatter is worse than the one that includes examples, so this should fail with the same prompt
     await expect(wrapper()).rejects.toThrowError(ElelemError);
+
+    expect(attempts).toBe(1);
+  }, 10000);
+
+  test("invalid format (temp non-0)", async () => {
+    const usage: ElelemUsage = {
+      completion_tokens: 0,
+      prompt_tokens: 0,
+      total_tokens: 0,
+      cost_usd: 0,
+    };
+
+    let attempts = 0;
+
+    const wrapper = async () => {
+      await llm
+        .session(
+          "invalid-format",
+          { openai: { model: "gpt-3.5-turbo" } },
+          async (c) => {
+            try {
+              const { result: cityDescription } = await c.openai(
+                "city-description",
+                {
+                  max_tokens: 100,
+                  temperature: 0.1,
+                },
+                `Request ${Math.random()}\nFor the given capitol city, return the founding year and an estimate of the population of the city.`,
+                "Washington, D.C.",
+                cityResponseSchema,
+                (schema) => {
+                  attempts += 1;
+                  return LangchainJsonSchemaFormatter(schema);
+                },
+              );
+              return cityDescription;
+            } catch (e) {
+              // check that we're returning usage for the individual attempts
+              if (e instanceof ElelemError) {
+                expect(e.usage.prompt_tokens).toBeGreaterThan(0);
+                expect(e.usage.completion_tokens).toBeGreaterThan(0);
+                expect(e.usage.total_tokens).toBeGreaterThan(0);
+                expect(e.usage.cost_usd).toBeGreaterThan(0);
+
+                usage.prompt_tokens += e.usage.prompt_tokens;
+                usage.completion_tokens += e.usage.completion_tokens;
+                usage.total_tokens += e.usage.total_tokens;
+                usage.cost_usd += e.usage.cost_usd;
+              } else {
+                // this should never happen!
+                expect(true).toBe(false);
+              }
+              throw e;
+            }
+          },
+        )
+        .catch((e) => {
+          // check that we're returning usage for the session
+          if (e instanceof ElelemError) {
+            expect(e.usage.prompt_tokens).toBe(usage.prompt_tokens);
+            expect(e.usage.completion_tokens).toBe(usage.completion_tokens);
+            expect(e.usage.total_tokens).toBe(usage.total_tokens);
+            expect(e.usage.cost_usd).toBe(usage.cost_usd);
+          } else {
+            // this should never happen!
+            expect(true).toBe(false);
+          }
+          throw e;
+        });
+    };
+
+    // langchain formatter is worse than the one that includes examples, so this should fail with the same prompt
+    await expect(wrapper()).rejects.toThrowError(ElelemError);
+
+    expect(attempts).toBe(3);
   }, 10000);
 });
 
