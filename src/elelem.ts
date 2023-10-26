@@ -137,25 +137,35 @@ async function withRetries<T>(
   backoffOptions?: Partial<BackoffOptions>,
 ): Promise<T> {
   let attemptCounter = 0;
+  let nonRetryErr: Error | undefined = undefined;
 
   return await getTracer().startActiveSpan(spanName, async (parentSpan) => {
     try {
       return await backOff(async () => {
-        return getTracer().startActiveSpan(
-          `${spanName}-attempt-${attemptCounter}`,
-          async (span) => {
-            try {
-              return await operation(span, parentSpan);
-            } catch (error) {
-              span.recordException(error as Exception);
-              span.setStatus({ code: SpanStatusCode.ERROR });
-              throw error;
-            } finally {
-              attemptCounter++;
-              span.end();
-            }
-          },
-        );
+        if (nonRetryErr !== undefined) {
+          throw nonRetryErr;
+        } else {
+          return getTracer().startActiveSpan(
+            `${spanName}-attempt-${attemptCounter}`,
+            async (span) => {
+              try {
+                return await operation(span, parentSpan);
+              } catch (error) {
+                span.recordException(error as Exception);
+                span.setStatus({ code: SpanStatusCode.ERROR });
+
+                if ((error as Error).message.startsWith("ELELEM_NO_RETRY")) {
+                  nonRetryErr = error as Error;
+                }
+
+                throw error;
+              } finally {
+                attemptCounter++;
+                span.end();
+              }
+            },
+          );
+        }
       }, backoffOptions);
     } catch (error) {
       parentSpan.recordException(error as Exception);
@@ -167,7 +177,7 @@ async function withRetries<T>(
   });
 }
 
-async function generate<T, ModelOpt>(
+async function generate<T, ModelOpt extends object>(
   chatId: string,
   combinedOptions: ModelOpt,
   systemPrompt: string,
@@ -255,12 +265,36 @@ async function generate<T, ModelOpt>(
                 throw new Error("No JSON available in response");
               }
 
-              const parsed = schema.safeParse(JSON.parse(extractedJson));
+              let json;
+
+              try {
+                json = JSON.parse(extractedJson);
+              } catch (e: any) {
+                if (
+                  "temperature" in combinedOptions &&
+                  combinedOptions.temperature === 0
+                ) {
+                  throw new Error(`ELELEM_NO_RETRY ${e.message}`);
+                } else {
+                  throw e;
+                }
+              }
+
+              const parsed = schema.safeParse(json);
 
               if (!parsed.success) {
-                throw new Error(
-                  `Invalid schema returned from LLM: ${parsed.error.toString()}`,
-                );
+                if (
+                  "temperature" in combinedOptions &&
+                  combinedOptions.temperature === 0
+                ) {
+                  throw new Error(
+                    `ELELEM_NO_RETRY Invalid schema returned from LLM: ${parsed.error.toString()}`,
+                  );
+                } else {
+                  throw new Error(
+                    `Invalid schema returned from LLM: ${parsed.error.toString()}`,
+                  );
+                }
               } else {
                 const nonNullJson: string = extractedJson;
 
@@ -297,8 +331,9 @@ async function generate<T, ModelOpt>(
           code: SpanStatusCode.ERROR,
         });
         error = String(e);
+        const message = (e as Error).message;
         throw new ElelemError(
-          (e as Error).message,
+          message,
           // should represent total so far across attempts
           generateUsage,
         );
