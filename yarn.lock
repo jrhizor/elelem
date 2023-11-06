@@ -980,6 +980,11 @@
   resolved "https://registry.yarnpkg.com/@types/stack-utils/-/stack-utils-2.0.1.tgz#20f18294f797f2209b5f65c8e3b5c8e8261d127c"
   integrity sha512-Hl219/BT5fLAaz6NDkSuhzasy49dwQS/DSdu4MdggFB8zcXv7vflBI3xp7FEmkmdDkBUI2bPUNeMttp2knYdxw==
 
+"@types/url-join@4.0.1":
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/@types/url-join/-/url-join-4.0.1.tgz#4989c97f969464647a8586c7252d97b449cdc045"
+  integrity sha512-wDXw9LEEUHyV+7UWy7U315nrJGJ7p1BzaCxDpEoLr789Dk1WDVMMlf3iBfbG2F8NdWnYyFbtTxUn2ZNbm1Q4LQ==
+
 "@types/yargs-parser@*":
   version "21.0.0"
   resolved "https://registry.yarnpkg.com/@types/yargs-parser/-/yargs-parser-21.0.0.tgz#0c60e537fa790f5f9472ed2776c2b71ec117351b"
@@ -991,6 +996,11 @@
   integrity sha512-6i0aC7jV6QzQB8ne1joVZ0eSFIstHsCrobmOtghM11yGlH0j43FKL2UhWdELkyps0zuf7qVTUVCCR+tgSlyLLw==
   dependencies:
     "@types/yargs-parser" "*"
+
+"@ungap/url-search-params@0.2.2":
+  version "0.2.2"
+  resolved "https://registry.yarnpkg.com/@ungap/url-search-params/-/url-search-params-0.2.2.tgz#2de3bdec21476a9b70ef11fd7b794752f9afa04c"
+  integrity sha512-qQsguKXZVKdCixOHX9jqnX/K/1HekPDpGKyEcXHT+zR6EjGA7S4boSuelL4uuPv6YfhN0n8c4UxW+v/Z3gM2iw==
 
 abort-controller@^3.0.0:
   version "3.0.0"
@@ -1071,6 +1081,14 @@ asynckit@^0.4.0:
   version "0.4.0"
   resolved "https://registry.yarnpkg.com/asynckit/-/asynckit-0.4.0.tgz#c79ed97f7f34cb8f2ba1bc9790bcc366474b4b79"
   integrity sha512-Oei9OH4tRh0YqU3GxhX79dM/mwVgvbZJaSNaRk+bshkj0S5cfHcgYakreBjrHwatXKbz+IoIdYLxrKim2MjW0Q==
+
+axios@0.27.2:
+  version "0.27.2"
+  resolved "https://registry.yarnpkg.com/axios/-/axios-0.27.2.tgz#207658cc8621606e586c85db4b41a750e756d972"
+  integrity sha512-t+yRIyySRTp/wua5xEr+z1q60QmLq8ABsS5O9Me1AsE5dfKqgnCFzwiCZZ/cGNd1lq4/7akDWMxdhVlucjmnOQ==
+  dependencies:
+    follow-redirects "^1.14.9"
+    form-data "^4.0.0"
 
 babel-jest@^29.7.0:
   version "29.7.0"
@@ -1272,10 +1290,16 @@ co@^4.6.0:
   resolved "https://registry.yarnpkg.com/co/-/co-4.6.0.tgz#6ea6bdf3d853ae54ccb8e47bfa0bf3f9031fb184"
   integrity sha512-QVb0dM5HvG+uaxitm8wONl7jltx8dqhfU33DcqtOZcLSVIKSDDLDi7+0LbAKiyI8hD9u42m2YxXSkMGWThaecQ==
 
-cohere-ai@^6.2.2:
-  version "6.2.2"
-  resolved "https://registry.yarnpkg.com/cohere-ai/-/cohere-ai-6.2.2.tgz#ea3a01d5bad839ffb006e8ec793c034a951cca7e"
-  integrity sha512-+Tq+4e8N/YWKJqFpWaULsfbZR/GOvGh8WWYFKR1bpipu8bCok3VcbTPnBmIToQiIqOgFpGk3HsA4b0guVyL3vg==
+cohere-ai@^7.1.1:
+  version "7.1.1"
+  resolved "https://registry.yarnpkg.com/cohere-ai/-/cohere-ai-7.1.1.tgz#a7f4ac583e1517b62971b224ac782fb5e0872048"
+  integrity sha512-yY8MkrRIhi/FHmDyqssjFpg0O4Sj8Jb/GsWCXEo+jIKjwUPeodaZwxGmP9TrouKqWh5g06EFOT4bF5VOJzSRSw==
+  dependencies:
+    "@types/url-join" "4.0.1"
+    "@ungap/url-search-params" "0.2.2"
+    axios "0.27.2"
+    js-base64 "3.7.2"
+    url-join "4.0.1"
 
 collect-v8-coverage@^1.0.0:
   version "1.0.2"
@@ -1535,6 +1559,11 @@ find-up@^4.0.0, find-up@^4.1.0:
     locate-path "^5.0.0"
     path-exists "^4.0.0"
 
+follow-redirects@^1.14.9:
+  version "1.15.3"
+  resolved "https://registry.yarnpkg.com/follow-redirects/-/follow-redirects-1.15.3.tgz#fe2f3ef2690afce7e82ed0b44db08165b207123a"
+  integrity sha512-1VzOtuEM8pC9SFU1E+8KfTjZyMztRsgEfwQl44z8A25uy13jSzTj6dyK2Df52iV0vgHCfBwLhDWevLn95w5v6Q==
+
 form-data-encoder@1.7.2:
   version "1.7.2"
   resolved "https://registry.yarnpkg.com/form-data-encoder/-/form-data-encoder-1.7.2.tgz#1f1ae3dccf58ed4690b86d87e4f57c654fbab040"
@@ -1544,6 +1573,15 @@ form-data@^3.0.0:
   version "3.0.1"
   resolved "https://registry.yarnpkg.com/form-data/-/form-data-3.0.1.tgz#ebd53791b78356a99af9a300d4282c4d5eb9755f"
   integrity sha512-RHkBKtLWUVwd7SqRIvCZMEvAMoGUp0XU+seQiZejj0COz3RI3hWP4sCv3gZWWLjJTd7rGwcsF5eKZGii0r/hbg==
+  dependencies:
+    asynckit "^0.4.0"
+    combined-stream "^1.0.8"
+    mime-types "^2.1.12"
+
+form-data@^4.0.0:
+  version "4.0.0"
+  resolved "https://registry.yarnpkg.com/form-data/-/form-data-4.0.0.tgz#93919daeaf361ee529584b9b31664dc12c9fa452"
+  integrity sha512-ETEklSGi5t0QMZuiXoA/Q6vcnxcLQP5vdugSpuAyi6SVGi2clPPp+xgEhuMaHC+zGgn31Kd235W35f7Hykkaww==
   dependencies:
     asynckit "^0.4.0"
     combined-stream "^1.0.8"
@@ -2172,6 +2210,11 @@ jest@^29.7.0:
     "@jest/types" "^29.6.3"
     import-local "^3.0.2"
     jest-cli "^29.7.0"
+
+js-base64@3.7.2:
+  version "3.7.2"
+  resolved "https://registry.yarnpkg.com/js-base64/-/js-base64-3.7.2.tgz#816d11d81a8aff241603d19ce5761e13e41d7745"
+  integrity sha512-NnRs6dsyqUXejqk/yv2aiXlAvOs56sLkX6nUdeaNezI5LFFLlsZjOThmwnrcwh5ZZRwZlCMnVAY3CvhIhoVEKQ==
 
 js-tokens@^4.0.0:
   version "4.0.0"
@@ -2853,6 +2896,11 @@ update-browserslist-db@^1.0.11:
   dependencies:
     escalade "^3.1.1"
     picocolors "^1.0.0"
+
+url-join@4.0.1:
+  version "4.0.1"
+  resolved "https://registry.yarnpkg.com/url-join/-/url-join-4.0.1.tgz#b642e21a2646808ffa178c4c5fda39844e12cde7"
+  integrity sha512-jk1+QP6ZJqyOiuEI9AEWQfju/nB2Pw466kbA0LEZljHwKeMgd9WrAEgEGxjPDD2+TNbbb37rTyhEfrCXfuKXnA==
 
 uuid@^8.3.2:
   version "8.3.2"

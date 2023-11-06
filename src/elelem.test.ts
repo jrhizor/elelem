@@ -4,7 +4,7 @@ import { z } from "zod";
 import { elelem } from "./elelem";
 import { describe, expect, test, afterAll } from "@jest/globals";
 import { config } from "dotenv";
-import cohere from "cohere-ai";
+import { CohereClient } from "cohere-ai";
 import { ElelemUsage, ElelemError } from "./types";
 
 import * as opentelemetry from "@opentelemetry/sdk-node";
@@ -28,7 +28,10 @@ config();
 
 const redisClient = new Redis(process.env.REDIS!);
 const openAiClient = new OpenAI({ apiKey: process.env.OPENAI_API_KEY });
-cohere.init(process.env.COHERE_API_KEY || "");
+
+const cohere = new CohereClient({
+    token: process.env.COHERE_API_KEY || "",
+});
 
 const llm = elelem.init({
   openai: openAiClient,
@@ -351,7 +354,7 @@ describe("cohere", () => {
       async (c) => {
         const { result: capitol } = await c.cohere(
           "capitol",
-          { max_tokens: 100, temperature: 0 },
+          { maxTokens: 100, temperature: 0 },
           `What is the capitol of the country provided?`,
           "USA",
           capitolResponseSchema,
@@ -362,7 +365,7 @@ describe("cohere", () => {
         const { result: cityDescription } = await c.cohere(
           "city-description",
           {
-            max_tokens: 100,
+            maxTokens: 100,
             temperature: 0,
           },
           `For the given capitol city, return the founding year and an estimate of the population of the city.`,

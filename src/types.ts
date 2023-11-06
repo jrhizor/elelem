@@ -5,11 +5,8 @@ import { ZodType } from "zod";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
 import { CompletionUsage } from "openai/resources";
 import { Span } from "@opentelemetry/api";
-import {
-  cohereResponse,
-  generateRequest,
-  generateResponse,
-} from "cohere-ai/dist/models";
+import {GenerateRequest, GenerationFinalResponse} from "cohere-ai/api";
+import {CohereClient} from "cohere-ai";
 
 export interface ElelemCache {
   // keys will be hashed using object-hash
@@ -30,8 +27,8 @@ export interface CohereGenerateBaseConfig {
 
 export interface Cohere {
   generate: (
-    config: generateRequest,
-  ) => Promise<cohereResponse<generateResponse>>;
+    config: GenerateRequest,
+  ) => Promise<GenerationFinalResponse>;
 }
 
 export interface ElelemConfig {
@@ -39,7 +36,7 @@ export interface ElelemConfig {
   backoffOptions?: BackoffOptions;
   cache?: ElelemCacheConfig;
   openai?: OpenAI;
-  cohere?: Cohere;
+  cohere?: CohereClient;
 }
 
 export interface Elelem {
@@ -50,12 +47,12 @@ export type ElelemFormatter = <T>(schema: ZodType<T>) => string;
 
 export interface ElelemModelOptions {
   openai?: Omit<ChatCompletionCreateParamsNonStreaming, "messages">;
-  cohere?: Partial<Omit<generateRequest, "prompt">>;
+  cohere?: Partial<Omit<GenerateRequest, "prompt">>;
 }
 
 export interface PartialElelemModelOptions {
   openai?: Partial<Omit<ChatCompletionCreateParamsNonStreaming, "messages">>;
-  cohere?: Partial<Omit<generateRequest, "prompt">>;
+  cohere?: Partial<Omit<GenerateRequest, "prompt">>;
 }
 
 export interface InitializedElelem {
@@ -80,7 +77,7 @@ export interface ElelemContext {
 
   cohere: <T>(
     chatId: string,
-    modelOptions: Partial<Omit<generateRequest, "prompt">>,
+    modelOptions: Partial<Omit<GenerateRequest, "prompt">>,
     systemPrompt: string,
     userPrompt: string,
     schema: ZodType<T>,
