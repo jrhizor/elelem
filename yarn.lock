@@ -10,10 +10,10 @@
     "@jridgewell/gen-mapping" "^0.3.0"
     "@jridgewell/trace-mapping" "^0.3.9"
 
-"@anatine/zod-mock@^3.13.2":
-  version "3.13.2"
-  resolved "https://registry.yarnpkg.com/@anatine/zod-mock/-/zod-mock-3.13.2.tgz#b8e8be2607be7838220c89171761ec8ce7afad7a"
-  integrity sha512-MEKI4G4sZJxBONDw2jZBK54+wxi8t+T7lAdYtJt7H0AURzmXiU2gNHArv+ycjI6DHZMBe52SKbmmXpu/JYUzUg==
+"@anatine/zod-mock@^3.13.3":
+  version "3.13.3"
+  resolved "https://registry.yarnpkg.com/@anatine/zod-mock/-/zod-mock-3.13.3.tgz#4236adfcd31a42dde093b044a661cc2db0b74bf9"
+  integrity sha512-AN+0YEFE7s6BpuALQHhEoVmJmD+0gPnf4Fehc6oE5NHbM3X2ZD5fW5M6vvot29NWUB6nxvj0gu+BPQ9cVnxALw==
   dependencies:
     randexp "^0.5.3"
 
@@ -304,10 +304,10 @@
   resolved "https://registry.yarnpkg.com/@bcoe/v8-coverage/-/v8-coverage-0.2.3.tgz#75a2e8b51cb758a7553d6804a5932d7aace75c39"
   integrity sha512-0hYQ8SB4Db5zvZB4axdMHGwEaQjkZzFjQiN9LVYvIFB2nSUHW9tYpxWriPrWDASIxiaXax83REcLxuSdnGPZtw==
 
-"@faker-js/faker@^8.0.2":
-  version "8.0.2"
-  resolved "https://registry.yarnpkg.com/@faker-js/faker/-/faker-8.0.2.tgz#bab698c5d3da9c52744e966e0e3eedb6c8b05c37"
-  integrity sha512-Uo3pGspElQW91PCvKSIAXoEgAUlRnH29sX2/p89kg7sP1m2PzCufHINd0FhTXQf6DYGiUlVncdSPa2F9wxed2A==
+"@faker-js/faker@^8.2.0":
+  version "8.2.0"
+  resolved "https://registry.yarnpkg.com/@faker-js/faker/-/faker-8.2.0.tgz#d4656d2cb485fe6ec4e7b340da9f16fac2c36c4a"
+  integrity sha512-VacmzZqVxdWdf9y64lDOMZNDMM/FQdtM9IsaOPKOm2suYwEatb8VkdHqOzXcDnZbk7YDE2BmsJmy/2Hmkn563g==
 
 "@grpc/grpc-js@^1.7.1":
   version "1.9.3"
@@ -965,10 +965,10 @@
   resolved "https://registry.yarnpkg.com/@types/node/-/node-18.17.15.tgz#31301a273b9ca7d568fe6d1c35ae52e0fb3f8d6a"
   integrity sha512-2yrWpBk32tvV/JAd3HNHWuZn/VDN1P+72hWirHnvsvTGSqbANi+kSeuQR9yAHnbvaBvHDsoTdXV0Fe+iRtHLKA==
 
-"@types/object-hash@^3.0.4":
-  version "3.0.4"
-  resolved "https://registry.yarnpkg.com/@types/object-hash/-/object-hash-3.0.4.tgz#31865a3d69de1042fec2ede56fd8cf0bb4e01641"
-  integrity sha512-w4fEy2suq1bepUxHoJRCBHJz0vS5DPAYpSbcgNwOahljxwyJsiKmi8qyes2/TJc+4Avd7fsgP+ZgUuXZjPvdug==
+"@types/object-hash@^3.0.5":
+  version "3.0.5"
+  resolved "https://registry.yarnpkg.com/@types/object-hash/-/object-hash-3.0.5.tgz#f028398f9d918a4dcb57c50d16fc15023db6b244"
+  integrity sha512-WFGeSazfL5BWbEh5ACaAIs5RT6sbVIwBs1rgHUp+kZzX/gub41LEEYWTWbYnE/sKb7hDdPEsGa1Vmcaay2fS5g==
 
 "@types/shimmer@^1.0.2":
   version "1.0.2"
@@ -2415,10 +2415,10 @@ onetime@^5.1.2:
   dependencies:
     mimic-fn "^2.1.0"
 
-openai@^4.12.1:
-  version "4.12.1"
-  resolved "https://registry.yarnpkg.com/openai/-/openai-4.12.1.tgz#f1ef4283197cf2ef932abc55afeae8a2182d8fe6"
-  integrity sha512-EAoUwm4dtiWvFwBhOCK/VfF8sj1ZU8+aAIJnfT4NyeTfrt1DM/6Gdd6fOZWTjBYryTAqu9Vpb5+9Wu6JMtm/gA==
+openai@^4.15.4:
+  version "4.15.4"
+  resolved "https://registry.yarnpkg.com/openai/-/openai-4.15.4.tgz#7c6acdb5b02806a663fdb142cc35cecc3792aab2"
+  integrity sha512-EnlSl1p8n7Q/HnBf4+VOEcYloBKKe23sKOFfH/WJcw+XVyWav4lwDK4wCmsUY1wS4RFOdbA2EwBUB2p5WEPmoQ==
   dependencies:
     "@types/node" "^18.11.18"
     "@types/node-fetch" "^2.6.4"
@@ -2428,6 +2428,7 @@ openai@^4.12.1:
     form-data-encoder "1.7.2"
     formdata-node "^4.3.2"
     node-fetch "^2.6.7"
+    web-streams-polyfill "^3.2.1"
 
 opentracing@^0.14.4:
   version "0.14.7"
@@ -2878,6 +2879,11 @@ web-streams-polyfill@4.0.0-beta.3:
   version "4.0.0-beta.3"
   resolved "https://registry.yarnpkg.com/web-streams-polyfill/-/web-streams-polyfill-4.0.0-beta.3.tgz#2898486b74f5156095e473efe989dcf185047a38"
   integrity sha512-QW95TCTaHmsYfHDybGMwO5IJIM93I/6vTRk+daHTWFPhwh+C8Cg7j7XyKrwrj8Ib6vYXe0ocYNrmzY4xAAN6ug==
+
+web-streams-polyfill@^3.2.1:
+  version "3.2.1"
+  resolved "https://registry.yarnpkg.com/web-streams-polyfill/-/web-streams-polyfill-3.2.1.tgz#71c2718c52b45fd49dbeee88634b3a60ceab42a6"
+  integrity sha512-e0MO3wdXWKrLbL0DgGnUV7WHVuw9OUvL4hjgnPkIeEvESk74gAITi5G606JtZPp39cd8HA9VQzCIvA49LpPN5Q==
 
 webidl-conversions@^3.0.0:
   version "3.0.1"

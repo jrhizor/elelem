@@ -98,7 +98,7 @@ describe("openai", () => {
 
     expect(result.foundingYear).toBe("1790");
     expect(result.populationEstimate).toBeGreaterThan(500000);
-  }, 10000);
+  }, 20000);
 
   test("cache test", async () => {
     const inputString = `something-${Math.random()}`;
@@ -133,7 +133,7 @@ describe("openai", () => {
     expect(usage2.completion_tokens).toBe(0);
     expect(usage2.total_tokens).toBe(0);
     expect(usage2.cost_usd).toBe(0);
-  }, 10000);
+  }, 20000);
 
   test("correct sums of tokens", async () => {
     let usage1: ElelemUsage = {
@@ -194,7 +194,7 @@ describe("openai", () => {
     expect(totalUsage.completion_tokens).toBeGreaterThan(0);
     expect(totalUsage.total_tokens).toBeGreaterThan(0);
     expect(totalUsage.cost_usd).toBeGreaterThan(0);
-  }, 10000);
+  }, 20000);
 
   test("invalid format", async () => {
     const usage: ElelemUsage = {
@@ -267,7 +267,7 @@ describe("openai", () => {
     await expect(wrapper()).rejects.toThrowError(ElelemError);
 
     expect(attempts).toBe(1);
-  }, 10000);
+  }, 20000);
 
   test("invalid format (temp non-0)", async () => {
     const usage: ElelemUsage = {
@@ -340,7 +340,7 @@ describe("openai", () => {
     await expect(wrapper()).rejects.toThrowError(ElelemError);
 
     expect(attempts).toBe(3);
-  }, 10000);
+  }, 20000);
 });
 
 describe("cohere", () => {
@@ -381,7 +381,7 @@ describe("cohere", () => {
 
     expect(result.foundingYear).toBe("1800");
     expect(result.populationEstimate).toBeGreaterThan(500000);
-  }, 10000);
+  }, 20000);
 });
 
 interface AddContext {
