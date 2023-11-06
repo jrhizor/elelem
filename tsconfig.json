@@ -1,14 +1,20 @@
 {
   "compilerOptions": {
+    "extendedDiagnostics": true,
     "strict": true,
-    "incremental": true,
+    "target": "ES6",
+    "module": "CommonJS",
+    "moduleResolution": "node",
     "esModuleInterop": true,
-    "module": "commonjs",
-    "target": "es2019",
+    "skipLibCheck": true,
     "declaration": true,
-    "outDir": "./dist"
+    "noUnusedParameters": true,
+    "outDir": "dist",
+    "rootDir": "src",
+    "baseUrl": "src"
   },
   "include": [
-    "src/**/*"
-  ]
+    "src"
+  ],
+  "exclude": []
 }
