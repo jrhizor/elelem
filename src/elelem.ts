@@ -18,10 +18,8 @@ import {
   ElelemConfigAttributes,
   ElelemContext,
   ElelemFormatter,
-  ElelemModelOptions,
   ElelemUsage,
   ElelemError,
-  PartialElelemModelOptions,
   Cohere,
 } from "./types";
 import { estimateCost } from "./costs";
