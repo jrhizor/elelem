@@ -27,7 +27,8 @@ import { getCache } from "./caching";
 import { setElelemConfigAttributes, setUsageAttributes } from "./tracing";
 import { ChatCompletionCreateParamsNonStreaming } from "openai/resources/chat/completions";
 import { ZodType } from "zod";
-import { generateRequest } from "cohere-ai/dist/models";
+import {GenerateRequest} from "cohere-ai/api";
+import {CohereClient} from "cohere-ai";
 
 function getTracer() {
   return trace.getTracer("elelem", "0.0.1");
@@ -101,10 +102,10 @@ const callOpenAIApi = async (
 };
 
 const callCohereApi = async (
-  cohere: Cohere,
+  cohere: CohereClient,
   systemPromptWithFormat: string,
   userPrompt: string,
-  modelOptions: Omit<generateRequest, "prompt"> & { max_tokens: number },
+  modelOptions: Omit<GenerateRequest, "prompt"> & { max_tokens: number },
 ): Promise<string> => {
   return await getTracer().startActiveSpan(`cohere-call`, async (span) => {
     span.setAttribute("cohere.prompt.system", systemPromptWithFormat);
@@ -115,17 +116,17 @@ const callCohereApi = async (
       prompt: `${systemPromptWithFormat}\n${userPrompt}`,
     });
 
-    if (response.statusCode !== 200) {
+    if (response.generations.length === 0) {
       span.end();
-      throw new Error("Error code from api!");
+      throw new Error("No generation from API!");
     }
 
     // todo: add cost calculation once available if cohere supports it in the future
 
-    span.setAttribute("cohere.response", response.body.generations[0].text);
+    span.setAttribute("cohere.response", response.generations[0].text);
 
     span.end();
-    return response.body.generations[0].text;
+    return response.generations[0].text;
   });
 };
 
@@ -447,7 +448,7 @@ export const elelem: Elelem = {
                 const apiCaller = async (
                   systemPromptWithFormat: string,
                   userPrompt: string,
-                  combinedOptions: Omit<generateRequest, "prompt"> & {
+                  combinedOptions: Omit<GenerateRequest, "prompt"> & {
                     max_tokens: number;
                   },
                 ): Promise<string> => {
@@ -459,7 +460,7 @@ export const elelem: Elelem = {
                   );
                 };
 
-                const combinedOptions: Omit<generateRequest, "prompt"> & {
+                const combinedOptions: Omit<GenerateRequest, "prompt"> & {
                   max_tokens: number;
                 } = {
                   ...{ max_tokens: 100 },
